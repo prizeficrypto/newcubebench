@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { store } from "./store.ts";
 
 /**
  * Session state for the app. The token lives in localStorage; the user is
@@ -73,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         /* config is advisory; email auth still works */
       }
-      const token = localStorage.getItem(TOKEN_KEY);
+      const token = store.get(TOKEN_KEY);
       if (!token) {
         if (!cancelled) setLoading(false);
         return;
@@ -86,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const data = await res.json();
           if (!cancelled) setUser(data.user);
         } else {
-          localStorage.removeItem(TOKEN_KEY); // stale token: sign out honestly
+          store.remove(TOKEN_KEY); // stale token: sign out honestly
         }
       } catch {
         /* offline: leave signed out; a retry happens on next load */
@@ -100,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const finishSignIn = useCallback((data: { user: User; token: string }) => {
-    localStorage.setItem(TOKEN_KEY, data.token);
+    store.set(TOKEN_KEY, data.token);
     setUser(data.user);
   }, []);
 
@@ -129,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const saveProfile = useCallback(
     async (profile: { displayName?: string; avg333?: string }) => {
-      const token = localStorage.getItem(TOKEN_KEY) ?? "";
+      const token = store.get(TOKEN_KEY) ?? "";
       const data = await postJson<{ user: User }>("/api/profile", profile, token);
       setUser(data.user);
     },
@@ -137,8 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    localStorage.removeItem(TOKEN_KEY);
+    const token = store.get(TOKEN_KEY);
+    store.remove(TOKEN_KEY);
     setUser(null);
     if (token) {
       try {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { SolveTimer } from "../components/SolveTimer.tsx";
 import { nextScramble, warmUp } from "../lib/scrambles.ts";
+import { store } from "../lib/store.ts";
 import {
   formatMs,
   stageBreakdown,
@@ -16,18 +17,23 @@ import {
  * 3x3 scrambles from cubing.js.
  */
 const INTRO_SEEN_KEY = "cb_skill_intro_seen";
+const SESSION_KEY = "cb_skill_session_v1";
 
 export default function SkillTimer() {
   const [scramble, setScramble] = useState<string | null>(null);
   const [scrambleError, setScrambleError] = useState<string | null>(null);
-  const [solves, setSolves] = useState<Solve[]>([]);
+  // The session survives navigation and refresh — practice shouldn't
+  // evaporate because you glanced at Pricing.
+  const [solves, setSolves] = useState<Solve[]>(
+    () => store.getJson<Solve[]>(SESSION_KEY) ?? [],
+  );
   // First visit: explain what the Skill Timer is before the timer takes over.
   const [showIntro, setShowIntro] = useState(
-    () => localStorage.getItem(INTRO_SEEN_KEY) !== "1",
+    () => store.get(INTRO_SEEN_KEY) !== "1",
   );
 
   function dismissIntro() {
-    localStorage.setItem(INTRO_SEEN_KEY, "1");
+    store.set(INTRO_SEEN_KEY, "1");
     setShowIntro(false);
   }
 
@@ -49,11 +55,24 @@ export default function SkillTimer() {
   }, [loadScramble]);
 
   function handleComplete(solve: Solve) {
-    setSolves((prev) => [...prev, solve]);
+    setSolves((prev) => {
+      const next = [...prev, solve];
+      store.setJson(SESSION_KEY, next);
+      return next;
+    });
     loadScramble();
   }
 
   function resetSession() {
+    if (
+      solves.length > 0 &&
+      !window.confirm(
+        `Reset this session? Your ${solves.length} solve${solves.length === 1 ? "" : "s"} will be cleared.`,
+      )
+    ) {
+      return;
+    }
+    store.remove(SESSION_KEY);
     setSolves([]);
   }
 
