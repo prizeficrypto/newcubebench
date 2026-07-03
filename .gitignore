@@ -5,3 +5,6 @@ dist/
 .vite/
 .env
 server/data/
+
+# TS build info (regenerated every build)
+*.tsbuildinfo
