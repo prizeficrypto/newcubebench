@@ -27,9 +27,10 @@ import {
 } from "./billing.ts";
 import { FEATURED_COMP_IDS } from "./featured.ts";
 import {
+  get333Ranking,
+  get333RoundScrambles,
+  get333Rounds,
   getCompetition,
-  getFirstRound333Ranking,
-  getFirstRound333Scrambles,
   searchCompetitions,
   WcaError,
 } from "./wca.ts";
@@ -148,34 +149,70 @@ app.get(
 
 // First-round 3x3 scramble set (Group A). Reports availability explicitly so
 // the client can block solving for comps with no scrambles.
+// Gate a competition behind Pro (featured comps are free). Returns true if
+// the request should be blocked; writes the 403 itself.
+async function blockedByPlan(
+  req: express.Request,
+  res: express.Response,
+  id: string,
+): Promise<boolean> {
+  if (FEATURED_COMP_IDS.has(id)) return false;
+  const user = await userForToken(bearerToken(req));
+  if (isPro(user)) return false;
+  res.status(403).json({
+    error: "This competition is part of Cube Bench Pro.",
+    upgrade: true,
+  });
+  return true;
+}
+
+// The solvable 3x3 rounds of a competition (first → final), for the round
+// picker. Metadata only — scrambles come from /round.
+app.get(
+  "/api/competitions/:id/rounds",
+  wrap(async (req, res) => {
+    const { id } = req.params;
+    if (await blockedByPlan(req, res, id)) return;
+    const [comp, data] = await Promise.all([
+      withCache(`comp:${id}`, TTL.SHORT_MS, () => getCompetition(id)),
+      withCache(`rounds:${id}`, TTL.LONG_MS, () => get333Rounds(id)),
+    ]);
+    res.json({
+      competition: comp,
+      available: data.available,
+      reason: data.reason,
+      rounds: data.rounds.map((r) => ({
+        roundTypeId: r.roundTypeId,
+        roundName: r.roundName,
+      })),
+    });
+  }),
+);
+
+// A single round's scramble set. roundTypeId omitted → the first round.
 app.get(
   "/api/competitions/:id/round",
   wrap(async (req, res) => {
     const { id } = req.params;
-    // Server-side gating: featured comps are free; the rest need Pro. Enforced
-    // here so the plan can't be bypassed from devtools.
-    if (!FEATURED_COMP_IDS.has(id)) {
-      const user = await userForToken(bearerToken(req));
-      if (!isPro(user)) {
-        res.status(403).json({
-          error: "This competition is part of Cube Bench Pro.",
-          upgrade: true,
-        });
-        return;
-      }
+    if (await blockedByPlan(req, res, id)) return;
+    const roundTypeId =
+      typeof req.query.roundTypeId === "string" ? req.query.roundTypeId : undefined;
+    if (roundTypeId && !(roundTypeId in ROUND_TYPES)) {
+      res.status(400).json({ error: `Unknown round type "${roundTypeId}".` });
+      return;
     }
     const [comp, round] = await Promise.all([
       withCache(`comp:${id}`, TTL.SHORT_MS, () => getCompetition(id)),
-      // Scrambles are immutable once generated -> cache long.
-      withCache(`scrambles:${id}`, TTL.LONG_MS, () =>
-        getFirstRound333Scrambles(id),
+      // Scrambles are immutable once generated -> cache long, per round.
+      withCache(`round:${id}:${roundTypeId ?? "first"}`, TTL.LONG_MS, () =>
+        get333RoundScrambles(id, roundTypeId),
       ),
     ]);
     res.json({ competition: comp, round });
   }),
 );
 
-// Real competitors' averages for the identified first round, WCA-ordered.
+// Real competitors (named, WCA-ordered) for a given round.
 app.get(
   "/api/competitions/:id/ranking",
   wrap(async (req, res) => {
@@ -190,7 +227,7 @@ app.get(
     }
     const ttl = (await isFinished(id)) ? TTL.LONG_MS : TTL.SHORT_MS;
     const ranking = await withCache(`ranking:${id}:${roundTypeId}`, ttl, () =>
-      getFirstRound333Ranking(id, roundTypeId),
+      get333Ranking(id, roundTypeId),
     );
     res.json({ ranking });
   }),

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  getRound,
+  getRounds,
   searchCompetitions,
   type Competition,
-  type RoundScrambleSet,
+  type RoundMeta,
 } from "../lib/api.ts";
 import { FEATURED_COMPS, FEATURED_COMP_IDS } from "../lib/featured.ts";
 import { isTouchDevice } from "../lib/pointer.ts";
@@ -23,7 +23,7 @@ import { useAuth } from "../lib/auth.tsx";
 export function CompetitionPicker({
   onProceed,
 }: {
-  onProceed: (comp: Competition, round: RoundScrambleSet) => void;
+  onProceed: (comp: Competition, rounds: RoundMeta[]) => void;
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -81,19 +81,19 @@ export function CompetitionPicker({
     }
     setSelectingId(comp.id);
     try {
-      const { round } = await getRound(comp.id);
-      if (round.available && round.scrambles && round.scrambles.length > 0) {
-        onProceed(comp, round);
+      const { available, reason, rounds } = await getRounds(comp.id);
+      if (available && rounds.length > 0) {
+        onProceed(comp, rounds);
       } else {
         setUnavailable((u) => ({
           ...u,
-          [comp.id]: round.reason ?? "Scrambles not available",
+          [comp.id]: reason ?? "Scrambles not available",
         }));
       }
     } catch (err) {
       setUnavailable((u) => ({
         ...u,
-        [comp.id]: err instanceof Error ? err.message : "Could not load scrambles",
+        [comp.id]: err instanceof Error ? err.message : "Could not load rounds",
       }));
     } finally {
       setSelectingId(null);

@@ -76,10 +76,15 @@ export function Results({
   const worstIdx =
     avgCs === null ? -1 : orderVals.lastIndexOf(Math.max(...orderVals));
 
+  type Neighbor = { rank: number; name: string; averageCs: number };
   const [ranking, setRanking] = useState<{
     placement: number;
     total: number;
     fastestCs: number | null;
+    /** up to 10 real competitors ranked immediately above the user (faster) */
+    above: Neighbor[];
+    /** up to 10 ranked immediately below (slower) */
+    below: Neighbor[];
   } | null>(null);
   const [rankError, setRankError] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
@@ -100,12 +105,24 @@ export function Results({
           setRankError("no official results are published for this round yet");
           return;
         }
-        const { placement, total } = placeAverage(
-          avgCs,
-          r.averagesAsc,
-          r.totalCompetitors,
-        );
-        setRanking({ placement, total, fastestCs: r.fastestAverage });
+        const averages = r.competitors.map((c) => c.averageCs);
+        const { placement, total } = placeAverage(avgCs, averages, r.totalCompetitors);
+        // The user slots in at index (placement - 1) among the valid field.
+        // Real competitors [idx-10, idx) rank above; [idx, idx+10) below.
+        const idx = placement - 1;
+        const toNeighbor = (c: { name: string; averageCs: number }, i: number) => ({
+          // ranks shift down by one below the user's inserted slot
+          rank: i < idx ? i + 1 : i + 2,
+          name: c.name,
+          averageCs: c.averageCs,
+        });
+        const above = r.competitors
+          .slice(Math.max(0, idx - 10), idx)
+          .map((c, k) => toNeighbor(c, Math.max(0, idx - 10) + k));
+        const below = r.competitors
+          .slice(idx, idx + 10)
+          .map((c, k) => toNeighbor(c, idx + k));
+        setRanking({ placement, total, fastestCs: r.fastestAverage, above, below });
       })
       .catch((err) => {
         if (!cancelled)
@@ -187,7 +204,45 @@ export function Results({
         </div>
       </Rise>
 
-      <Rise index={2}>
+      {ranking && (ranking.above.length > 0 || ranking.below.length > 0) && (
+        <Rise index={2} className="results__board-wrap">
+          <div className="card board">
+            <div className="board__head">
+              <span className="eyebrow">Where you'd slot in</span>
+              <span className="tertiary board__sub">
+                Real competitors around your average
+              </span>
+            </div>
+            <div className="board__rows">
+              {ranking.above.map((n) => (
+                <div className="board__row" key={`a-${n.rank}`}>
+                  <span className="board__rank mono">{ordinal(n.rank)}</span>
+                  <span className="board__name">{n.name}</span>
+                  <span className="board__time mono">
+                    {formatCentiseconds(n.averageCs)}
+                  </span>
+                </div>
+              ))}
+              <div className="board__row board__row--you">
+                <span className="board__rank mono">{ordinal(ranking.placement)}</span>
+                <span className="board__name">You</span>
+                <span className="board__time mono">{avgText}</span>
+              </div>
+              {ranking.below.map((n) => (
+                <div className="board__row" key={`b-${n.rank}`}>
+                  <span className="board__rank mono">{ordinal(n.rank)}</span>
+                  <span className="board__name">{n.name}</span>
+                  <span className="board__time mono">
+                    {formatCentiseconds(n.averageCs)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Rise>
+      )}
+
+      <Rise index={3}>
         <div className="results__solves">
           {attempts.map((a, i) => {
             const dropped = i === bestIdx || i === worstIdx;
@@ -206,7 +261,7 @@ export function Results({
         </div>
       </Rise>
 
-      <Rise index={3}>
+      <Rise index={4}>
         <p className="tertiary results__drop-note">
           Best and worst are dropped — the average is the mean of the middle
           three.
@@ -216,7 +271,7 @@ export function Results({
         </p>
       </Rise>
 
-      <Rise index={4}>
+      <Rise index={5}>
         <button className="btn btn--secondary" onClick={onRestart}>
           Try another competition
         </button>

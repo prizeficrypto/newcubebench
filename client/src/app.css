@@ -175,6 +175,105 @@
   white-space: nowrap;
 }
 
+/* ---------- round chooser ---------- */
+
+.picker__back {
+  align-self: flex-start;
+  margin: 0 0 6px -18px;
+}
+
+.round-choose {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.round-choose__row {
+  cursor: pointer;
+}
+
+.round-choose__error {
+  margin-bottom: 14px;
+}
+
+/* ---------- ranking leaderboard (Results) ---------- */
+
+.board {
+  width: 100%;
+  padding: 22px 24px;
+}
+
+.board__head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 14px;
+}
+
+.board__sub {
+  font-size: 13px;
+}
+
+.board__rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.board__row {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.board__row + .board__row {
+  border-top: 1px solid var(--border);
+}
+
+.board__rank {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.board__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.board__time {
+  color: var(--text);
+}
+
+/* the user's own row: accent tint, no top border seam */
+.board__row--you {
+  background: var(--accent-soft);
+  border-radius: 10px;
+}
+
+.board__row--you + .board__row {
+  border-top: none;
+}
+
+.board__row--you .board__name {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.board__row--you .board__rank {
+  color: var(--accent);
+}
+
+.board__row--you .board__time {
+  color: var(--accent);
+  font-weight: 500;
+}
+
 /* ---------- solving ---------- */
 
 /* 1fr auto 1fr keeps the counter truly centered regardless of button width */

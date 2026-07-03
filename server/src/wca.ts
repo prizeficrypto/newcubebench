@@ -1,4 +1,4 @@
-import { firstRoundCode, roundName } from "./roundTypes.ts";
+import { roundName, roundOrder } from "./roundTypes.ts";
 
 const WCA_BASE = "https://www.worldcubeassociation.org/api/v0";
 const EVENT_333 = "333";
@@ -164,89 +164,133 @@ export type RoundScrambleSet = {
   scrambles?: string[];
 };
 
+/** One solvable 3x3 round of a competition (Group A, ordered, ao5-complete). */
+export type Round333 = {
+  roundTypeId: string;
+  roundName: string;
+  order: number;
+  groupId: string;
+  scrambles: string[];
+};
+
+export type Rounds333 = {
+  available: boolean;
+  reason?: string;
+  /** every solvable 3x3 round, in competition order (first → final) */
+  rounds: Round333[];
+};
+
 /**
- * Fetch and shape the first-round 3x3 scramble set for a competition.
+ * All solvable 3x3 rounds of a competition.
  *
  * The scrambles endpoint returns ONE flat list for the whole comp, so we:
  *   1. filter to event 333,
- *   2. pick the first round via the round-type sort order,
- *   3. bucket by (round_type_id, group_id) and take Group A (or the first
- *      group present if there is no literal "A"),
- *   4. drop is_extra backups,
- *   5. order by scramble_num.
+ *   2. split into rounds by round_type_id,
+ *   3. within each round take Group A (or the first group present),
+ *   4. drop is_extra backups, order by scramble_num,
+ *   5. keep rounds that have a full average-of-5 (≥5 scrambles),
+ *   6. sort rounds by their real competition order.
  *
- * Returns { available:false } with a human reason when scrambles were never
- * uploaded (404/null) or when 333 simply isn't in this comp's scramble set.
+ * This is the single WCA fetch; the round list and any individual round are
+ * both derived from it, so it's cached once per competition.
  */
-export async function getFirstRound333Scrambles(
-  id: string,
-): Promise<RoundScrambleSet> {
+export async function get333Rounds(id: string): Promise<Rounds333> {
   const { data } = await wcaFetch<WcaScramble[]>(
     `/competitions/${encodeURIComponent(id)}/scrambles`,
   );
 
   if (!data || !Array.isArray(data) || data.length === 0) {
-    return { available: false, reason: "Scrambles not available" };
+    return { available: false, reason: "Scrambles not available", rounds: [] };
   }
 
   const threes = data.filter((s) => s.event_id === EVENT_333);
   if (threes.length === 0) {
-    return { available: false, reason: "No 3x3 scrambles for this competition" };
-  }
-
-  const roundCode = firstRoundCode(threes.map((s) => s.round_type_id));
-  if (!roundCode) {
-    return { available: false, reason: "Could not identify the first round" };
-  }
-
-  const roundScrambles = threes.filter((s) => s.round_type_id === roundCode);
-
-  // Prefer Group "A"; otherwise fall back to the first group present.
-  const groups = [...new Set(roundScrambles.map((s) => s.group_id))].sort();
-  const groupId = groups.includes("A") ? "A" : groups[0];
-
-  const set = roundScrambles
-    .filter((s) => s.group_id === groupId && !s.is_extra)
-    .sort((a, b) => a.scramble_num - b.scramble_num)
-    .map((s) => s.scramble);
-
-  // An average-of-5 round needs 5 scrambles. Old best-of-3 rounds or
-  // partial uploads would otherwise strand the user mid-round client-side.
-  if (set.length < 5) {
     return {
       available: false,
-      reason:
-        set.length === 0
-          ? "No usable scrambles for the first round"
-          : "This round isn't a full average of 5",
+      reason: "No 3x3 scrambles for this competition",
+      rounds: [],
     };
   }
 
+  const byRound = new Map<string, WcaScramble[]>();
+  for (const s of threes) {
+    const list = byRound.get(s.round_type_id) ?? [];
+    list.push(s);
+    byRound.set(s.round_type_id, list);
+  }
+
+  const rounds: Round333[] = [];
+  for (const [code, roundScrambles] of byRound) {
+    // Prefer Group "A"; otherwise the first group present.
+    const groups = [...new Set(roundScrambles.map((s) => s.group_id))].sort();
+    const groupId = groups.includes("A") ? "A" : groups[0];
+    const scrambles = roundScrambles
+      .filter((s) => s.group_id === groupId && !s.is_extra)
+      .sort((a, b) => a.scramble_num - b.scramble_num)
+      .map((s) => s.scramble);
+    // An average-of-5 round needs 5 scrambles; skip cutoff/partial rounds.
+    if (scrambles.length < 5) continue;
+    rounds.push({
+      roundTypeId: code,
+      roundName: roundName(code),
+      order: roundOrder(code),
+      groupId,
+      scrambles,
+    });
+  }
+
+  if (rounds.length === 0) {
+    return {
+      available: false,
+      reason: "No full average-of-5 3x3 rounds for this competition",
+      rounds: [],
+    };
+  }
+
+  rounds.sort((a, b) => a.order - b.order || a.roundTypeId.localeCompare(b.roundTypeId));
+  return { available: true, rounds };
+}
+
+/** One round's scramble set. `roundTypeId` omitted → the first round. */
+export async function get333RoundScrambles(
+  id: string,
+  roundTypeId?: string,
+): Promise<RoundScrambleSet> {
+  const { available, reason, rounds } = await get333Rounds(id);
+  if (!available) return { available: false, reason };
+  const round = roundTypeId
+    ? rounds.find((r) => r.roundTypeId === roundTypeId)
+    : rounds[0];
+  if (!round) {
+    return { available: false, reason: "That round isn't available." };
+  }
   return {
     available: true,
-    roundTypeId: roundCode,
-    roundName: roundName(roundCode),
-    groupId,
-    scrambles: set,
+    roundTypeId: round.roundTypeId,
+    roundName: round.roundName,
+    groupId: round.groupId,
+    scrambles: round.scrambles,
   };
 }
+
+export type Competitor = { name: string; averageCs: number };
 
 export type RankingData = {
   roundTypeId: string;
   roundName: string;
   totalCompetitors: number;
-  /** valid Ao5 averages (centiseconds), ascending; DNFs excluded from array */
-  averagesAsc: number[];
+  /** valid Ao5 competitors, ascending by average; DNFs excluded from the list
+   *  but counted in totalCompetitors (they rank last, WCA-style) */
+  competitors: Competitor[];
   fastestAverage: number | null;
 };
 
 /**
- * Real competitors' averages for the first-round 3x3, ordered the WCA way:
- * competitors with a valid average rank ascending; DNF / no-average
- * competitors are counted in the total but sort last (excluded from the
- * averages array). `totalCompetitors` is everyone in the round.
+ * Real competitors for a given 3x3 round, ordered the WCA way: valid averages
+ * ascending (with names), DNF/no-average competitors excluded from the list
+ * but counted in totalCompetitors.
  */
-export async function getFirstRound333Ranking(
+export async function get333Ranking(
   id: string,
   roundTypeId: string,
 ): Promise<RankingData> {
@@ -257,16 +301,16 @@ export async function getFirstRound333Ranking(
     (r) => r.event_id === EVENT_333 && r.round_type_id === roundTypeId,
   );
 
-  const valid = rows
+  const competitors: Competitor[] = rows
     .filter((r) => r.average > 0)
-    .map((r) => r.average)
-    .sort((a, b) => a - b);
+    .map((r) => ({ name: r.name, averageCs: r.average }))
+    .sort((a, b) => a.averageCs - b.averageCs);
 
   return {
     roundTypeId,
     roundName: roundName(roundTypeId),
     totalCompetitors: rows.length,
-    averagesAsc: valid,
-    fastestAverage: valid.length ? valid[0] : null,
+    competitors,
+    fastestAverage: competitors.length ? competitors[0].averageCs : null,
   };
 }

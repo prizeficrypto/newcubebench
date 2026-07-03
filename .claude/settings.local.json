@@ -54,7 +54,10 @@
       "Bash(git commit -q -m 'Stop tracking tsbuildinfo build artifact *)",
       "Bash(node --check src/index.ts)",
       "Bash(node -e \"import\\('./src/auth.ts'\\).then\\(\\(\\)=>console.log\\('auth ok'\\)\\).catch\\(e=>console.log\\('auth ERR',e.message\\)\\)\")",
-      "Bash(node -e \"import\\('./src/auth.ts'\\).then\\(m=>m.getUser\\('x'\\)\\).then\\(\\(\\)=>console.log\\('server loads users ok'\\)\\).catch\\(e=>console.log\\('ERR',e.message\\)\\)\")"
+      "Bash(node -e \"import\\('./src/auth.ts'\\).then\\(m=>m.getUser\\('x'\\)\\).then\\(\\(\\)=>console.log\\('server loads users ok'\\)\\).catch\\(e=>console.log\\('ERR',e.message\\)\\)\")",
+      "Bash(curl -s --max-time 8 localhost:4000/health)",
+      "Bash(curl -s --max-time 10 localhost:5173/api/auth/config)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 8 localhost:5173/)"
     ]
   }
 }

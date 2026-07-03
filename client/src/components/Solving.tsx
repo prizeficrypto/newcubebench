@@ -9,11 +9,13 @@ import { CompTimer } from "./CompTimer.tsx";
  */
 export function Solving({
   scrambles,
+  roundName,
   attempts,
   onAttempt,
   onBack,
 }: {
   scrambles: string[];
+  roundName?: string;
   attempts: Attempt[];
   onAttempt: (attempt: Attempt) => void;
   onBack: () => void;
@@ -29,6 +31,7 @@ export function Solving({
           ‹ Back
         </button>
         <span className="solving__count mono" aria-label={`Solve ${index + 1} of ${total}`}>
+          {roundName ? `${roundName} · ` : ""}
           {index + 1} / {total}
         </span>
         <div className="solving__times mono" aria-label="Times so far">
