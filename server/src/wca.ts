@@ -210,8 +210,16 @@ export async function getFirstRound333Scrambles(
     .sort((a, b) => a.scramble_num - b.scramble_num)
     .map((s) => s.scramble);
 
-  if (set.length === 0) {
-    return { available: false, reason: "No usable scrambles for the first round" };
+  // An average-of-5 round needs 5 scrambles. Old best-of-3 rounds or
+  // partial uploads would otherwise strand the user mid-round client-side.
+  if (set.length < 5) {
+    return {
+      available: false,
+      reason:
+        set.length === 0
+          ? "No usable scrambles for the first round"
+          : "This round isn't a full average of 5",
+    };
   }
 
   return {

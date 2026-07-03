@@ -52,6 +52,13 @@ export function Results({
     getRanking(comp.id, round.roundTypeId)
       .then(({ ranking: r }) => {
         if (cancelled) return;
+        // An empty field ("1st of 0") is not a ranking — surface it as the
+        // results simply not being available. (An all-DNF field with real
+        // competitors is legitimately "1st of N" and passes through.)
+        if (r.totalCompetitors === 0) {
+          setRankError("no official results are published for this round yet");
+          return;
+        }
         const { placement, total } = placeAverage(
           avgCs,
           r.averagesAsc,

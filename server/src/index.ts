@@ -56,14 +56,18 @@ const wrap =
   (req: express.Request, res: express.Response, next: express.NextFunction) =>
     fn(req, res).catch(next);
 
-/** Was this competition already over (as of today)? Drives cache TTL. */
+/** Was this competition already over? Drives cache TTL. */
 async function isFinished(id: string): Promise<boolean> {
   try {
     const comp = await withCache(`comp:${id}`, TTL.SHORT_MS, () =>
       getCompetition(id),
     );
     if (!comp.end_date) return false;
-    return new Date(comp.end_date).getTime() < Date.now();
+    // end_date is date-only (UTC midnight at the START of the final day);
+    // the comp is only over once that whole day has passed. Otherwise an
+    // in-progress comp's partial results get cached for 24h.
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    return new Date(comp.end_date).getTime() + DAY_MS < Date.now();
   } catch {
     return false; // when unsure, treat as live and cache conservatively
   }
