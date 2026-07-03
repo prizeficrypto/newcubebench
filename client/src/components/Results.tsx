@@ -81,10 +81,17 @@ export function Results({
     placement: number;
     total: number;
     fastestCs: number | null;
+    /** top three of this round */
+    podium: Neighbor[];
     /** up to 10 real competitors ranked immediately above the user (faster) */
     above: Neighbor[];
     /** up to 10 ranked immediately below (slower) */
     below: Neighbor[];
+    /** whether the top-3 are already visible in `above` (avoid duplication) */
+    podiumInWindow: boolean;
+    nextRound: { roundName: string; advancedCount: number } | null;
+    /** did the user's placement make the next round's cut? */
+    qualified: boolean | null;
   } | null>(null);
   const [rankError, setRankError] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
@@ -116,13 +123,33 @@ export function Results({
           name: c.name,
           averageCs: c.averageCs,
         });
+        const aboveStart = Math.max(0, idx - 10);
         const above = r.competitors
-          .slice(Math.max(0, idx - 10), idx)
-          .map((c, k) => toNeighbor(c, Math.max(0, idx - 10) + k));
+          .slice(aboveStart, idx)
+          .map((c, k) => toNeighbor(c, aboveStart + k));
         const below = r.competitors
           .slice(idx, idx + 10)
           .map((c, k) => toNeighbor(c, idx + k));
-        setRanking({ placement, total, fastestCs: r.fastestAverage, above, below });
+        const podium = r.competitors
+          .slice(0, 3)
+          .map((c, k) => toNeighbor(c, k));
+        // if the neighbor window already starts within the top 3, the podium
+        // is redundant — don't show it twice
+        const podiumInWindow = placement <= 3 || aboveStart < 3;
+        const qualified = r.nextRound
+          ? placement <= r.nextRound.advancedCount
+          : null;
+        setRanking({
+          placement,
+          total,
+          fastestCs: r.fastestAverage,
+          podium,
+          above,
+          below,
+          podiumInWindow,
+          nextRound: r.nextRound,
+          qualified,
+        });
       })
       .catch((err) => {
         if (!cancelled)
@@ -204,9 +231,59 @@ export function Results({
         </div>
       </Rise>
 
+      {/* did you make the cut for the next round? */}
+      {ranking?.nextRound && (
+        <Rise index={2}>
+          <div
+            className={`card cut${ranking.qualified ? " cut--in" : " cut--out"}`}
+          >
+            <span className="cut__badge">
+              {ranking.qualified ? "You'd have advanced" : "You'd have missed the cut"}
+            </span>
+            <p className="cut__line">
+              The top <strong className="mono">{ranking.nextRound.advancedCount}</strong>{" "}
+              of {ranking.total} went through to the {ranking.nextRound.roundName}.{" "}
+              {ranking.qualified
+                ? `Your ${ordinal(ranking.placement)} would have made it.`
+                : `Your ${ordinal(ranking.placement)} would have fallen ${ranking.placement - ranking.nextRound.advancedCount} short.`}
+            </p>
+          </div>
+        </Rise>
+      )}
+      {ranking && !ranking.nextRound && (
+        <Rise index={2}>
+          <div className="card cut cut--final">
+            <span className="cut__badge">The final</span>
+            <p className="cut__line">
+              This was the last round — your {ordinal(ranking.placement)} of{" "}
+              {ranking.total} would have been your finishing position.
+            </p>
+          </div>
+        </Rise>
+      )}
+
       {ranking && (ranking.above.length > 0 || ranking.below.length > 0) && (
-        <Rise index={2} className="results__board-wrap">
+        <Rise index={3} className="results__board-wrap">
           <div className="card board">
+            {!ranking.podiumInWindow && ranking.podium.length > 0 && (
+              <>
+                <div className="board__head">
+                  <span className="eyebrow">Round podium</span>
+                </div>
+                <div className="board__rows board__rows--podium">
+                  {ranking.podium.map((n) => (
+                    <div className="board__row" key={`p-${n.rank}`}>
+                      <span className="board__rank mono">{ordinal(n.rank)}</span>
+                      <span className="board__name">{n.name}</span>
+                      <span className="board__time mono">
+                        {formatCentiseconds(n.averageCs)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="board__divider" />
+              </>
+            )}
             <div className="board__head">
               <span className="eyebrow">Where you'd slot in</span>
               <span className="tertiary board__sub">
@@ -242,7 +319,7 @@ export function Results({
         </Rise>
       )}
 
-      <Rise index={3}>
+      <Rise index={4}>
         <div className="results__solves">
           {attempts.map((a, i) => {
             const dropped = i === bestIdx || i === worstIdx;
@@ -261,7 +338,7 @@ export function Results({
         </div>
       </Rise>
 
-      <Rise index={4}>
+      <Rise index={5}>
         <p className="tertiary results__drop-note">
           Best and worst are dropped — the average is the mean of the middle
           three.
@@ -271,7 +348,7 @@ export function Results({
         </p>
       </Rise>
 
-      <Rise index={5}>
+      <Rise index={6}>
         <button className="btn btn--secondary" onClick={onRestart}>
           Try another competition
         </button>

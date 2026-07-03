@@ -196,6 +196,44 @@
   margin-bottom: 14px;
 }
 
+/* ---------- did-you-qualify callout ---------- */
+
+.cut {
+  width: 100%;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cut__badge {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cut--in {
+  border-color: var(--good);
+  box-shadow: 0 0 0 1px var(--good);
+}
+
+.cut--in .cut__badge {
+  color: var(--good);
+}
+
+.cut--out .cut__badge,
+.cut--final .cut__badge {
+  color: var(--text-tertiary);
+}
+
+.cut__line {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
 /* ---------- ranking leaderboard (Results) ---------- */
 
 .board {
@@ -217,6 +255,24 @@
 .board__rows {
   display: flex;
   flex-direction: column;
+}
+
+.board__rows--podium {
+  margin-bottom: 4px;
+}
+
+.board__divider {
+  height: 1px;
+  background: var(--border);
+  margin: 14px 0;
+}
+
+.board .board__head + .board__rows {
+  margin-top: 2px;
+}
+
+.board .eyebrow + .board__sub {
+  margin-top: 3px;
 }
 
 .board__row {

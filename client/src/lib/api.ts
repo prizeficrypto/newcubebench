@@ -24,6 +24,8 @@ export type RoundMeta = { roundTypeId: string; roundName: string };
 
 export type Competitor = { name: string; averageCs: number };
 
+export type NextRoundInfo = { roundName: string; advancedCount: number };
+
 export type RankingData = {
   roundTypeId: string;
   roundName: string;
@@ -31,6 +33,8 @@ export type RankingData = {
   /** valid Ao5 competitors ascending by average (DNFs excluded, still counted) */
   competitors: Competitor[];
   fastestAverage: number | null;
+  /** null when this is the final round */
+  nextRound: NextRoundInfo | null;
 };
 
 /** The signed-in session token, if any — sent so Pro users clear gating. */

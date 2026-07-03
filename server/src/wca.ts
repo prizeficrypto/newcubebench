@@ -275,6 +275,9 @@ export async function get333RoundScrambles(
 
 export type Competitor = { name: string; averageCs: number };
 
+/** The round that came after this one, and how many competitors reached it. */
+export type NextRoundInfo = { roundName: string; advancedCount: number };
+
 export type RankingData = {
   roundTypeId: string;
   roundName: string;
@@ -283,12 +286,15 @@ export type RankingData = {
    *  but counted in totalCompetitors (they rank last, WCA-style) */
   competitors: Competitor[];
   fastestAverage: number | null;
+  /** null when this is the final round */
+  nextRound: NextRoundInfo | null;
 };
 
 /**
  * Real competitors for a given 3x3 round, ordered the WCA way: valid averages
  * ascending (with names), DNF/no-average competitors excluded from the list
- * but counted in totalCompetitors.
+ * but counted in totalCompetitors. Also reports the next round's size, so the
+ * client can say whether the user would have made the cut.
  */
 export async function get333Ranking(
   id: string,
@@ -297,10 +303,24 @@ export async function get333Ranking(
   const { data } = await wcaFetch<WcaResult[]>(
     `/competitions/${encodeURIComponent(id)}/results?event_id=${EVENT_333}`,
   );
-  const rows = (data ?? []).filter(
-    (r) => r.event_id === EVENT_333 && r.round_type_id === roundTypeId,
-  );
+  const all = (data ?? []).filter((r) => r.event_id === EVENT_333);
 
+  // How many competed in each round — the next round's size is how many
+  // advanced out of this one.
+  const countByRound = new Map<string, number>();
+  for (const r of all) {
+    countByRound.set(r.round_type_id, (countByRound.get(r.round_type_id) ?? 0) + 1);
+  }
+  const orderedRounds = [...countByRound.keys()].sort(
+    (a, b) => roundOrder(a) - roundOrder(b) || a.localeCompare(b),
+  );
+  const idx = orderedRounds.indexOf(roundTypeId);
+  const nextCode = idx >= 0 ? orderedRounds[idx + 1] : undefined;
+  const nextRound: NextRoundInfo | null = nextCode
+    ? { roundName: roundName(nextCode), advancedCount: countByRound.get(nextCode) ?? 0 }
+    : null;
+
+  const rows = all.filter((r) => r.round_type_id === roundTypeId);
   const competitors: Competitor[] = rows
     .filter((r) => r.average > 0)
     .map((r) => ({ name: r.name, averageCs: r.average }))
@@ -312,5 +332,6 @@ export async function get333Ranking(
     totalCompetitors: rows.length,
     competitors,
     fastestAverage: competitors.length ? competitors[0].averageCs : null,
+    nextRound,
   };
 }
