@@ -14,9 +14,10 @@ export default function Pricing() {
         <h1 className="title">Practice free. Benchmark deeper with Pro.</h1>
       </div>
 
-      <div className="pricing__grid">
-        <div className="card plan">
-          <h2 className="plan__name">Free</h2>
+      {/* one surface, two voices — same pattern as the landing's why-card */}
+      <div className="card pricing__card">
+        <div className="pricing__col">
+          <span className="why__label">Free</span>
           <p className="plan__price">
             <span className="plan__amount mono">$0</span>
           </p>
@@ -30,8 +31,10 @@ export default function Pricing() {
           </Link>
         </div>
 
-        <div className="card plan plan--pro">
-          <h2 className="plan__name">Pro</h2>
+        <div className="pricing__divider" aria-hidden="true" />
+
+        <div className="pricing__col">
+          <span className="why__label why__label--accent">Pro</span>
           <p className="plan__price">
             <span className="plan__amount mono">$3</span>
             <span className="plan__per">/month · first month free</span>

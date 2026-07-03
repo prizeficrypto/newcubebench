@@ -926,6 +926,17 @@
   color: var(--text);
 }
 
+/* ---------- 404 ---------- */
+
+.notfound {
+  padding-top: 9vh;
+}
+
+.notfound__actions {
+  display: flex;
+  gap: 10px;
+}
+
 /* ---------- skill timer intro ---------- */
 
 .skill-intro {
@@ -1747,27 +1758,34 @@
   margin-top: 6px;
 }
 
-.pricing__grid {
+/* one shared surface with a hairline divider — hierarchy comes from the
+   accent label and the single filled button, not a ringed "pro" card */
+.pricing__card {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  align-items: stretch;
+  grid-template-columns: 1fr 1px 1fr;
+  padding: 34px 38px;
 }
 
-.plan {
+.pricing__divider {
+  background: var(--border);
+}
+
+.pricing__col {
   display: flex;
   flex-direction: column;
-  padding: 28px;
+  padding: 0 30px;
 }
 
-.plan--pro {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent), var(--shadow-md);
+.pricing__col:first-child {
+  padding-left: 0;
 }
 
-.plan__name {
-  font-size: 17px;
-  margin-bottom: 6px;
+.pricing__col:last-child {
+  padding-right: 0;
+}
+
+.pricing__col .why__label {
+  margin-bottom: 14px;
 }
 
 .plan__price {
@@ -1876,8 +1894,16 @@
 }
 
 @media (max-width: 560px) {
-  .pricing__grid {
+  .pricing__card {
     grid-template-columns: 1fr;
+    gap: 28px;
+    padding: 28px 24px;
+  }
+  .pricing__divider {
+    display: none;
+  }
+  .pricing__col {
+    padding: 0;
   }
 }
 

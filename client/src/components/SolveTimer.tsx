@@ -134,7 +134,7 @@ export function SolveTimer({
       >
         <div className={`timer timer--${phase}`}>
           <div className="timer__time mono">{formatMs(elapsed)}</div>
-          <div className="timer__hint">
+          <div className="timer__hint" role="status" aria-live="polite">
             {phase === "ready" &&
               (touch
                 ? "Tap to start — tap again at the end of each stage"

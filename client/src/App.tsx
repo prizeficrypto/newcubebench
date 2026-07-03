@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./lib/auth.tsx";
 import { NavBar } from "./components/NavBar.tsx";
 import { AppShell } from "./components/AppShell.tsx";
@@ -41,8 +41,37 @@ export default function App() {
           <Route path="/simulator" element={<Navigate to="/app" replace />} />
           <Route path="/skill-timer" element={<Navigate to="/app/skill-timer" replace />} />
           <Route path="/pricing" element={<Navigate to="/app/pricing" replace />} />
+
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+  );
+}
+
+/** Unknown URLs get a page, not a blank screen. */
+function NotFound() {
+  return (
+    <>
+      <NavBar />
+      <main className="app">
+        <div className="screen container container--gate notfound">
+          <span className="eyebrow">404</span>
+          <h1 className="title">This page doesn't exist.</h1>
+          <p className="muted gate__sub">
+            Maybe the scramble was bad. The app and the landing page are still
+            where they always were.
+          </p>
+          <div className="notfound__actions">
+            <Link className="btn" to="/app">
+              Launch App
+            </Link>
+            <Link className="btn btn--ghost" to="/">
+              Go home
+            </Link>
+          </div>
+        </div>
+      </main>
+    </>
   );
 }

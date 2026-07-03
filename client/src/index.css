@@ -42,6 +42,12 @@
   box-sizing: border-box;
 }
 
+/* keyboard users get a real ring on a product driven by the keyboard */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 html,
 body,
 #root {

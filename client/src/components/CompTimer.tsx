@@ -290,7 +290,7 @@ export function CompTimer({
         {phase === "idle" && (
           <div className="timer">
             <div className="timer__time mono">0.00</div>
-            <div className="timer__hint">
+            <div className="timer__hint" role="status" aria-live="polite">
               {touch
                 ? "Tap to start inspection — you get 15 seconds, like a real round"
                 : "Press space to start inspection — you get 15 seconds, like a real round"}
@@ -309,7 +309,7 @@ export function CompTimer({
                   ? "+2"
                   : inspectionLeft}
             </div>
-            <div className="timer__hint">
+            <div className="timer__hint" role="status" aria-live="polite">
               {holdState === "armed"
                 ? "Release to start"
                 : holdState === "holding"
@@ -324,7 +324,7 @@ export function CompTimer({
         {phase === "running" && (
           <div className="timer timer--running">
             <div className="timer__time mono">{formatMs(elapsed)}</div>
-            <div className="timer__hint">
+            <div className="timer__hint" role="status" aria-live="polite">
               {touch ? "Tap to stop" : "Any key to stop"}
             </div>
           </div>
@@ -335,7 +335,7 @@ export function CompTimer({
             {/* the headline is the OFFICIAL time — penalized shows "20.00+"
                 here exactly as it will on the results screen */}
             <div className="timer__time mono">{formatAttempt(result)}</div>
-            <div className="timer__hint">
+            <div className="timer__hint" role="status" aria-live="polite">
               {result.dnf
                 ? "Marked as DNF — it won't count as a time"
                 : penaltyRef.current
