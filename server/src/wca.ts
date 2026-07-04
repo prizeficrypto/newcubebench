@@ -276,7 +276,15 @@ export async function get333RoundScrambles(
 export type Competitor = { name: string; averageCs: number };
 
 /** The round that came after this one, and how many competitors reached it. */
-export type NextRoundInfo = { roundName: string; advancedCount: number };
+export type NextRoundInfo = {
+  roundTypeId: string;
+  roundName: string;
+  advancedCount: number;
+  /** whether that round's scrambles exist so it can actually be simulated.
+   *  Results and scrambles are uploaded independently on the WCA, so a round
+   *  can have official results but no full scramble set. Set by the endpoint. */
+  solvable?: boolean;
+};
 
 export type RankingData = {
   roundTypeId: string;
@@ -317,7 +325,11 @@ export async function get333Ranking(
   const idx = orderedRounds.indexOf(roundTypeId);
   const nextCode = idx >= 0 ? orderedRounds[idx + 1] : undefined;
   const nextRound: NextRoundInfo | null = nextCode
-    ? { roundName: roundName(nextCode), advancedCount: countByRound.get(nextCode) ?? 0 }
+    ? {
+        roundTypeId: nextCode,
+        roundName: roundName(nextCode),
+        advancedCount: countByRound.get(nextCode) ?? 0,
+      }
     : null;
 
   const rows = all.filter((r) => r.round_type_id === roundTypeId);

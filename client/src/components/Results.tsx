@@ -5,6 +5,7 @@ import {
   attemptCs,
   formatAttempt,
   formatCentiseconds,
+  madeTheCut,
   ordinal,
   placeAverage,
   wcaAo5FromAttempts,
@@ -58,11 +59,14 @@ export function Results({
   round,
   attempts,
   onRestart,
+  onAdvance,
 }: {
   comp: Competition;
   round: RoundScrambleSet;
   attempts: Attempt[];
   onRestart: () => void;
+  /** advance into the next round the user just qualified for */
+  onAdvance: (roundTypeId: string, roundName: string) => void;
 }) {
   const { user } = useAuth();
 
@@ -89,7 +93,12 @@ export function Results({
     below: Neighbor[];
     /** whether the top-3 are already visible in `above` (avoid duplication) */
     podiumInWindow: boolean;
-    nextRound: { roundName: string; advancedCount: number } | null;
+    nextRound: {
+      roundTypeId: string;
+      roundName: string;
+      advancedCount: number;
+      solvable?: boolean;
+    } | null;
     /** did the user's placement make the next round's cut? */
     qualified: boolean | null;
   } | null>(null);
@@ -137,7 +146,7 @@ export function Results({
         // is redundant — don't show it twice
         const podiumInWindow = placement <= 3 || aboveStart < 3;
         const qualified = r.nextRound
-          ? placement <= r.nextRound.advancedCount
+          ? madeTheCut(placement, r.nextRound.advancedCount)
           : null;
         setRanking({
           placement,
@@ -247,6 +256,26 @@ export function Results({
                 ? `Your ${ordinal(ranking.placement)} would have made it.`
                 : `Your ${ordinal(ranking.placement)} would have fallen ${ranking.placement - ranking.nextRound.advancedCount} short.`}
             </p>
+            {ranking.qualified && ranking.nextRound.solvable && (
+              <button
+                className="btn cut__advance"
+                onClick={() =>
+                  onAdvance(
+                    ranking.nextRound!.roundTypeId,
+                    ranking.nextRound!.roundName,
+                  )
+                }
+              >
+                Simulate the {ranking.nextRound.roundName}{" "}
+                <span className="arrow">→</span>
+              </button>
+            )}
+            {ranking.qualified && !ranking.nextRound.solvable && (
+              <p className="tertiary cut__note">
+                The {ranking.nextRound.roundName}'s scrambles weren't uploaded to
+                the WCA, so it can't be simulated.
+              </p>
+            )}
           </div>
         </Rise>
       )}

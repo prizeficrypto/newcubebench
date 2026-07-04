@@ -229,7 +229,30 @@ app.get(
     const ranking = await withCache(`ranking:${id}:${roundTypeId}`, ttl, () =>
       get333Ranking(id, roundTypeId),
     );
-    res.json({ ranking });
+    // The advancement fact comes from /results, but simulating the next round
+    // needs its /scrambles. Cross-check so the client only offers to simulate
+    // rounds that actually have a full scramble set (no dead-end button). This
+    // is best-effort: if the scramble lookup fails, we still return the
+    // ranking (solvable stays undefined -> the client hides the button but
+    // keeps the advancement fact) rather than failing the whole request.
+    let out = ranking;
+    if (ranking.nextRound) {
+      let solvable: boolean | undefined = undefined;
+      try {
+        const rounds = await withCache(`rounds:${id}`, TTL.LONG_MS, () =>
+          get333Rounds(id),
+        );
+        solvable =
+          rounds.available &&
+          rounds.rounds.some(
+            (r) => r.roundTypeId === ranking.nextRound!.roundTypeId,
+          );
+      } catch {
+        /* scramble lookup unavailable — leave solvable undefined */
+      }
+      out = { ...ranking, nextRound: { ...ranking.nextRound, solvable } };
+    }
+    res.json({ ranking: out });
   }),
 );
 

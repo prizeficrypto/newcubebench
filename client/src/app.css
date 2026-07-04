@@ -234,6 +234,89 @@
   color: var(--text);
 }
 
+.cut__advance {
+  align-self: flex-start;
+  margin-top: 8px;
+  white-space: nowrap;
+}
+
+.cut__note {
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
+/* ---------- qualified interstitial ---------- */
+
+.qualified {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 9vh; /* matches the other optical-center screens */
+}
+
+.qualified__mark {
+  position: relative;
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  margin-bottom: 24px;
+}
+
+/* a single calm ring pulses out once — celebratory but on-system */
+.qualified__ring {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: qual-ring 1.1s var(--ease-out) 0.25s both;
+}
+
+@keyframes qual-ring {
+  from {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+/* eyebrow stays cobalt (base .eyebrow) — one accent; the copy carries the
+   "you passed" meaning, so no stray second color on the celebration */
+
+.qualified__title {
+  /* size comes from .display; only the margin is bespoke */
+  margin: 12px 0 20px;
+}
+
+.qualified__lead {
+  max-width: 30em;
+  margin: 0 0 32px;
+}
+
+.qualified__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.qualified__back {
+  margin-top: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qualified__ring {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* .qualified__title size + its 560px step-down are inherited from .display */
+
 /* ---------- ranking leaderboard (Results) ---------- */
 
 .board {
@@ -1319,15 +1402,21 @@
   letter-spacing: 0.01em;
 }
 
-/* the ghost CTA's arrow nudges right on hover */
-.btn--ghost .arrow {
+/* any button's trailing arrow nudges right on hover; the label + arrow
+   never split across lines */
+.btn .arrow {
   display: inline-block;
   margin-left: 6px;
   transition: transform var(--speed-ui) var(--ease-out);
 }
 
-.btn--ghost:hover .arrow {
+.btn:hover .arrow {
   transform: translateX(3px);
+}
+
+.cut__advance,
+.qualified__cta {
+  white-space: nowrap;
 }
 
 /* product showcase: the real result screen with a floating session card */

@@ -9,6 +9,7 @@ import {
   formatAttempt,
   formatCentiseconds,
   formatMs,
+  madeTheCut,
   msToCentiseconds,
   ordinal,
   placeAverage,
@@ -168,6 +169,14 @@ check("fastest-of-field places 1st; total is everyone", () => {
 });
 check("all-DNF field: no valid averages, user places 1st of total", () => {
   assert.deepEqual(placeAverage(1243, [], 7), { placement: 1, total: 7 });
+});
+
+// --- advancement cut boundary (top N advance) ---
+check("made the cut exactly at the boundary, missed one past it", () => {
+  assert.equal(madeTheCut(382, 382), true); // last qualifying spot
+  assert.equal(madeTheCut(383, 382), false); // first one out
+  assert.equal(madeTheCut(1, 16), true);
+  assert.equal(madeTheCut(17, 16), false);
 });
 
 // --- stage breakdown: sum each stage, largest share ---

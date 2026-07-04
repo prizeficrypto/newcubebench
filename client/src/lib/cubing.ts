@@ -185,6 +185,14 @@ export function formatCentiseconds(cs: number): string {
   return totalSeconds.toFixed(2);
 }
 
+/**
+ * WCA advancement: the top `advancedCount` finishers of a round move on, so a
+ * placement makes the cut iff it's within that count. (placement is 1-based.)
+ */
+export function madeTheCut(placement: number, advancedCount: number): boolean {
+  return placement <= advancedCount;
+}
+
 export function ordinal(n: number): string {
   const mod100 = n % 100;
   if (mod100 >= 11 && mod100 <= 13) return `${n}th`;

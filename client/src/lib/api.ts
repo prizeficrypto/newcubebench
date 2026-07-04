@@ -24,7 +24,13 @@ export type RoundMeta = { roundTypeId: string; roundName: string };
 
 export type Competitor = { name: string; averageCs: number };
 
-export type NextRoundInfo = { roundName: string; advancedCount: number };
+export type NextRoundInfo = {
+  roundTypeId: string;
+  roundName: string;
+  advancedCount: number;
+  /** whether that round can actually be simulated (its scrambles exist) */
+  solvable?: boolean;
+};
 
 export type RankingData = {
   roundTypeId: string;
