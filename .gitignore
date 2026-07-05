@@ -8,3 +8,6 @@ server/data/
 
 # TS build info (regenerated every build)
 *.tsbuildinfo
+
+# esbuild-bundled serverless function (generated at build)
+server/dist/
