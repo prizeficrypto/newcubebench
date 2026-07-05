@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { rateLimit } from "express-rate-limit";
 import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { TTL, withCache } from "./cache.ts";
@@ -450,6 +451,25 @@ app.post(
     res.json({ status: "ok" });
   }),
 );
+
+// ---- Serve the built client (production single-service deploy) ----
+// In dev this folder doesn't exist and Vite serves the client instead, so
+// this block is a no-op locally. API/health routes are registered above, so
+// they win; only unmatched GETs fall through to the SPA's index.html.
+const CLIENT_DIST = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "client",
+  "dist",
+);
+if (existsSync(CLIENT_DIST)) {
+  app.use(express.static(CLIENT_DIST));
+  app.use((req, res, next) => {
+    if (req.method !== "GET" || req.path.startsWith("/api")) return next();
+    res.sendFile(join(CLIENT_DIST, "index.html"));
+  });
+}
 
 // ---- Error handling: explicit, mapped, never swallowed ----
 app.use(
