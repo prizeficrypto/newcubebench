@@ -48,7 +48,7 @@ export default function Pricing() {
           </p>
           <ul className="plan__features">
             <li>Three featured competitions to simulate</li>
-            <li>Full Skill Timer, single sessions</li>
+            <li>Unlimited practice on the regular timer</li>
             <li>Real scrambles, real fields, exact WCA scoring</li>
           </ul>
           <Link className="btn btn--secondary plan__cta" to="/app">
@@ -94,7 +94,7 @@ export default function Pricing() {
           </p>
           <ul className="plan__features">
             <li>The entire library of past WCA competitions</li>
-            <li>Skill analytics that follow your progress across sessions</li>
+            <li>Skill Timer — stage-split timing and where your time goes</li>
             <li>Everything in Free</li>
           </ul>
           <ProAction

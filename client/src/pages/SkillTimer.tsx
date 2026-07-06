@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CompTimer } from "../components/CompTimer.tsx";
 import { SolveTimer } from "../components/SolveTimer.tsx";
+import { useAuth } from "../lib/auth.tsx";
 import { nextScramble, warmUp } from "../lib/scrambles.ts";
 import { store } from "../lib/store.ts";
 import {
@@ -28,8 +30,21 @@ type Mode = "regular" | "skill";
 type PracticeSolve = { totalMs: number; stages?: Solve["stages"] };
 
 export default function SkillTimer() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const isPro = Boolean(user?.pro);
   const [mode, setMode] = useState<Mode>("regular");
   const [scramble, setScramble] = useState<string | null>(null);
+
+  // Skill Timer (stage splits) is a Pro feature — non-Pro users are sent to
+  // Pricing instead of switching modes.
+  function chooseMode(next: Mode) {
+    if (next === "skill" && !isPro) {
+      navigate("/app/pricing");
+      return;
+    }
+    setMode(next);
+  }
   const [solves, setSolves] = useState<PracticeSolve[]>(
     () => store.getJson<PracticeSolve[]>(SESSION_KEY) ?? [],
   );
@@ -86,17 +101,18 @@ export default function SkillTimer() {
       <div className="timer-mode" role="group" aria-label="Timer mode">
         <button
           className={`timer-mode__btn${mode === "regular" ? " is-active" : ""}`}
-          onClick={() => setMode("regular")}
+          onClick={() => chooseMode("regular")}
           aria-pressed={mode === "regular"}
         >
           Regular
         </button>
         <button
           className={`timer-mode__btn${mode === "skill" ? " is-active" : ""}`}
-          onClick={() => setMode("skill")}
+          onClick={() => chooseMode("skill")}
           aria-pressed={mode === "skill"}
         >
           Skill Timer
+          {!isPro && <span className="timer-mode__pro">Pro</span>}
         </button>
       </div>
 
