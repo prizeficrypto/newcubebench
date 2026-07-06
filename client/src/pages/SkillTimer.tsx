@@ -24,8 +24,10 @@ import {
  * The session (either kind of solve) survives navigation and refresh.
  */
 const SESSION_KEY = "cb_timer_session_v2";
-/** Personal best (min single, ms) persisted across sessions — 3x3 practice. */
+/** Personal bests (ms) persisted across sessions — 3x3 practice. */
 const PB_KEY = "cb_timer_pb_v1";
+const PB_AO5_KEY = "cb_timer_pb_ao5_v1";
+const PB_AO12_KEY = "cb_timer_pb_ao12_v1";
 
 type Mode = "regular" | "skill";
 /** A practice solve. Stage splits are present only for Skill-Timer solves. */
@@ -50,9 +52,15 @@ export default function SkillTimer() {
   const [solves, setSolves] = useState<PracticeSolve[]>(
     () => store.getJson<PracticeSolve[]>(SESSION_KEY) ?? [],
   );
-  // Personal best survives across sessions and a session reset. Loaded once.
+  // Personal bests survive across sessions and a session reset. Loaded once.
   const [pbMs, setPbMs] = useState<number | null>(
     () => store.getJson<number>(PB_KEY),
+  );
+  const [pbAo5Ms, setPbAo5Ms] = useState<number | null>(
+    () => store.getJson<number>(PB_AO5_KEY),
+  );
+  const [pbAo12Ms, setPbAo12Ms] = useState<number | null>(
+    () => store.getJson<number>(PB_AO12_KEY),
   );
 
   const loadScramble = useCallback(() => {
@@ -64,6 +72,30 @@ export default function SkillTimer() {
     warmUp();
     loadScramble();
   }, [loadScramble]);
+
+  // Whenever a solve lands, capture new all-time best rolling averages. Each
+  // new solve makes exactly one new 5- and 12-window "current", so checking
+  // the latest window on every change captures every window's best.
+  useEffect(() => {
+    if (solves.length === 0) return;
+    const totals = solves.map((s) => s.totalMs);
+    const a5 = rollingAverage(totals, 5);
+    if (a5 !== null) {
+      setPbAo5Ms((p) => {
+        if (p !== null && p <= a5) return p;
+        store.setJson(PB_AO5_KEY, a5);
+        return a5;
+      });
+    }
+    const a12 = rollingAverage(totals, 12);
+    if (a12 !== null) {
+      setPbAo12Ms((p) => {
+        if (p !== null && p <= a12) return p;
+        store.setJson(PB_AO12_KEY, a12);
+        return a12;
+      });
+    }
+  }, [solves]);
 
   function record(solve: PracticeSolve) {
     setSolves((prev) => {
@@ -201,6 +233,30 @@ export default function SkillTimer() {
                 {summary.ao12Ms !== null ? formatMs(summary.ao12Ms) : DASH}
               </span>
             </div>
+            <div className="session__stat">
+              <span className="session__stat-label">Worst</span>
+              <span className="session__stat-value mono">
+                {summary.worstMs !== null ? formatMs(summary.worstMs) : DASH}
+              </span>
+            </div>
+            <div className="session__stat">
+              <span className="session__stat-label">Consistency</span>
+              <span className="session__stat-value mono">
+                {summary.stdevMs !== null ? `±${formatMs(summary.stdevMs)}` : DASH}
+              </span>
+            </div>
+            <div className="session__stat">
+              <span className="session__stat-label">Best Ao5</span>
+              <span className="session__stat-value mono">
+                {pbAo5Ms !== null ? formatMs(pbAo5Ms) : DASH}
+              </span>
+            </div>
+            <div className="session__stat">
+              <span className="session__stat-label">Best Ao12</span>
+              <span className="session__stat-value mono">
+                {pbAo12Ms !== null ? formatMs(pbAo12Ms) : DASH}
+              </span>
+            </div>
             {summary.breakdown && (
               <div className="session__stat">
                 <span className="session__stat-label">Focus on</span>
@@ -213,6 +269,8 @@ export default function SkillTimer() {
               </div>
             )}
           </div>
+
+          <TimeGraph times={solves.map((s) => s.totalMs)} />
 
           {summary.breakdown && (
             <div className="breakdown__bars">
@@ -244,17 +302,77 @@ export default function SkillTimer() {
   );
 }
 
+/**
+ * Session time graph: each solve plotted in order, newest at the right. Pure
+ * inline SVG (no chart lib) — a calm line + dots, scaled to the session's
+ * range. Needs at least 2 solves.
+ */
+function TimeGraph({ times }: { times: number[] }) {
+  if (times.length < 2) return null;
+  const W = 640;
+  const H = 150;
+  const PAD = 12;
+  const max = Math.max(...times);
+  const min = Math.min(...times);
+  const range = max - min || 1;
+  const x = (i: number) => PAD + (i / (times.length - 1)) * (W - 2 * PAD);
+  const y = (t: number) => PAD + (1 - (t - min) / range) * (H - 2 * PAD);
+  const line = times.map((t, i) => `${x(i).toFixed(1)},${y(t).toFixed(1)}`).join(" ");
+  const area = `${PAD},${H - PAD} ${line} ${W - PAD},${H - PAD}`;
+
+  return (
+    <div className="timegraph">
+      <div className="timegraph__head">
+        <span className="eyebrow">Session times</span>
+        <span className="tertiary timegraph__range mono">
+          {formatMs(min)} – {formatMs(max)}
+        </span>
+      </div>
+      <svg
+        className="timegraph__svg"
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label={`Your ${times.length} session times, plotted in order`}
+      >
+        <polygon className="timegraph__area" points={area} />
+        <polyline className="timegraph__line" points={line} fill="none" />
+        {times.map((t, i) => (
+          <circle
+            key={i}
+            className="timegraph__dot"
+            cx={x(i)}
+            cy={y(t)}
+            r={2.5}
+          />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 function sessionSummary(solves: PracticeSolve[]) {
   const totals = solves.map((s) => s.totalMs);
   // Stage breakdown only from Skill-Timer solves (the ones with splits).
   const withStages = solves.filter(
     (s): s is Required<PracticeSolve> => Boolean(s.stages),
   );
+  const meanMs = totals.length
+    ? totals.reduce((a, b) => a + b, 0) / totals.length
+    : null;
+  // Consistency = sample standard deviation (lower is steadier). Needs 2+.
+  const stdevMs =
+    totals.length >= 2 && meanMs !== null
+      ? Math.sqrt(
+          totals.reduce((s, t) => s + (t - meanMs) ** 2, 0) /
+            (totals.length - 1),
+        )
+      : null;
   return {
-    meanMs: totals.length
-      ? totals.reduce((a, b) => a + b, 0) / totals.length
-      : null,
+    meanMs,
     bestMs: totals.length ? Math.min(...totals) : null,
+    worstMs: totals.length ? Math.max(...totals) : null,
+    stdevMs,
     ao5Ms: rollingAverage(totals, 5),
     ao12Ms: rollingAverage(totals, 12),
     breakdown:

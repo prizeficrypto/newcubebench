@@ -1288,6 +1288,47 @@
   border-radius: 999px;
 }
 
+/* session time graph */
+.timegraph {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.timegraph__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.timegraph__range {
+  font-size: 12px;
+}
+
+.timegraph__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.timegraph__line {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.timegraph__area {
+  fill: var(--accent-soft);
+}
+
+.timegraph__dot {
+  fill: var(--accent);
+}
+
 .gate__skip {
   appearance: none;
   background: none;
