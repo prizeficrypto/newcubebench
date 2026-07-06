@@ -67,7 +67,7 @@ export function AppShell() {
               to="/app/skill-timer"
               className={({ isActive }) => `nav__link${isActive ? " is-active" : ""}`}
             >
-              Skill Timer
+              Timer
             </NavLink>
             <NavLink
               to="/app/pricing"
