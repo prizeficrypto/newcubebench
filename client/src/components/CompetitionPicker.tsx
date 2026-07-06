@@ -2,11 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getEvents,
+  getHighlight,
   searchCompetitions,
   type Competition,
   type EventMeta,
 } from "../lib/api.ts";
 import { FEATURED_COMPS, FEATURED_COMP_IDS } from "../lib/featured.ts";
+
+/** Best-effort highlight for a featured comp, keyed by comp id. */
+type Highlight = {
+  countryIso2?: string;
+  winnerName: string | null;
+  eventCount: number;
+};
 import { isTouchDevice } from "../lib/pointer.ts";
 import { useAuth } from "../lib/auth.tsx";
 
@@ -37,7 +45,36 @@ export function CompetitionPicker({
   const [unavailable, setUnavailable] = useState<Record<string, string>>({});
   const [retryNonce, setRetryNonce] = useState(0);
 
+  // Best-effort highlights for the featured info cards. Fetched once on mount,
+  // in parallel; a failure just leaves that card without winner/events.
+  const [highlights, setHighlights] = useState<Record<string, Highlight>>({});
+  const [highlightsDone, setHighlightsDone] = useState(false);
+
   const showingFeatured = query.trim() === "";
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.allSettled(
+      FEATURED_COMPS.map((c) => getHighlight(c.id)),
+    ).then((settled) => {
+      if (cancelled) return;
+      const next: Record<string, Highlight> = {};
+      settled.forEach((res, i) => {
+        if (res.status === "fulfilled") {
+          next[FEATURED_COMPS[i].id] = {
+            countryIso2: res.value.competition.country_iso2,
+            winnerName: res.value.winnerName,
+            eventCount: res.value.eventCount,
+          };
+        }
+      });
+      setHighlights(next);
+      setHighlightsDone(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Debounced search; the featured view needs no fetch at all.
   useEffect(() => {
@@ -102,6 +139,67 @@ export function CompetitionPicker({
 
   const rows: Competition[] = showingFeatured ? FEATURED_COMPS : results;
 
+  const featuredCards = (
+    <div className="picker__cards">
+      {FEATURED_COMPS.map((comp) => {
+        const note = unavailable[comp.id];
+        const busy = selectingId === comp.id;
+        const hl = highlights[comp.id];
+        const loading = !highlightsDone && !hl;
+        const location = [comp.city, countryName(hl?.countryIso2)]
+          .filter(Boolean)
+          .join(", ");
+        return (
+          <button
+            key={comp.id}
+            className={`comp-card${note ? " is-unavailable" : ""}`}
+            onClick={() => select(comp)}
+            disabled={!!note || !!selectingId}
+            aria-label={comp.name}
+          >
+            <span className="comp-card__top">
+              <span className="comp-card__name">{comp.name}</span>
+              <span className="comp-card__right">
+                {busy && <span className="spinner spinner--sm" />}
+                {note && <span className="comp-row__note">{note}</span>}
+                {!busy && !note && (
+                  <>
+                    {!isPro && <span className="comp-row__free">Free</span>}
+                    <span className="comp-row__chev">›</span>
+                  </>
+                )}
+              </span>
+            </span>
+            <span className="comp-card__meta tertiary">
+              {[location, formatMonthYear(comp.start_date)]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+            {loading ? (
+              <span className="comp-card__facts" aria-hidden="true">
+                <span className="skel skel--fact" />
+                <span className="skel skel--fact" />
+              </span>
+            ) : (
+              hl && (
+                <span className="comp-card__facts">
+                  {hl.winnerName && (
+                    <span className="comp-card__fact">
+                      Won by {hl.winnerName}
+                    </span>
+                  )}
+                  <span className="comp-card__fact">
+                    {hl.eventCount} event{hl.eventCount === 1 ? "" : "s"}
+                  </span>
+                </span>
+              )
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="screen container picker">
       <div className="picker__head">
@@ -129,6 +227,9 @@ export function CompetitionPicker({
         </p>
       )}
 
+      {showingFeatured ? (
+        featuredCards
+      ) : (
       <div className="picker__list card">
         {loading &&
           // skeleton rows: the layout doesn't jump from empty box to list
@@ -151,7 +252,7 @@ export function CompetitionPicker({
           </div>
         )}
 
-        {!loading && !error && !showingFeatured && rows.length === 0 && (
+        {!loading && !error && rows.length === 0 && (
           <div className="state-center muted picker__empty">
             <p>No competitions found.</p>
             <p className="tertiary">
@@ -203,17 +304,52 @@ export function CompetitionPicker({
             );
           })}
       </div>
+      )}
     </div>
   );
 }
 
+/** Parse a WCA "YYYY-MM-DD" as plain calendar parts — never timezone-shifted. */
+function ymd(iso?: string): { y: number; m: number; d: number } | null {
+  if (!iso) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!match) return null;
+  return { y: Number(match[1]), m: Number(match[2]), d: Number(match[3]) };
+}
+
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/** "Jul 27, 2023" — for the search-result rows. */
 function formatDate(iso?: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  const p = ymd(iso);
+  if (!p) return "";
+  return `${MONTHS[p.m - 1]} ${p.d}, ${p.y}`;
+}
+
+/** "July 2023" — the calmer form used on the featured info cards. */
+function formatMonthYear(iso?: string): string {
+  const p = ymd(iso);
+  if (!p) return "";
+  const long = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  return `${long[p.m - 1]} ${p.y}`;
+}
+
+/**
+ * Readable country name from an ISO 3166-1 alpha-2 code, via the platform's
+ * Intl.DisplayNames (no data table to maintain). Falls back to the raw code.
+ */
+function countryName(iso2?: string): string {
+  if (!iso2) return "";
+  try {
+    const dn = new Intl.DisplayNames(undefined, { type: "region" });
+    return dn.of(iso2.toUpperCase()) ?? iso2;
+  } catch {
+    return iso2;
+  }
 }

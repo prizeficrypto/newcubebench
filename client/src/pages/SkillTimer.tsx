@@ -24,6 +24,8 @@ import {
  * The session (either kind of solve) survives navigation and refresh.
  */
 const SESSION_KEY = "cb_timer_session_v2";
+/** Personal best (min single, ms) persisted across sessions — 3x3 practice. */
+const PB_KEY = "cb_timer_pb_v1";
 
 type Mode = "regular" | "skill";
 /** A practice solve. Stage splits are present only for Skill-Timer solves. */
@@ -48,6 +50,10 @@ export default function SkillTimer() {
   const [solves, setSolves] = useState<PracticeSolve[]>(
     () => store.getJson<PracticeSolve[]>(SESSION_KEY) ?? [],
   );
+  // Personal best survives across sessions and a session reset. Loaded once.
+  const [pbMs, setPbMs] = useState<number | null>(
+    () => store.getJson<number>(PB_KEY),
+  );
 
   const loadScramble = useCallback(() => {
     setScramble(null);
@@ -64,6 +70,11 @@ export default function SkillTimer() {
       const next = [...prev, solve];
       store.setJson(SESSION_KEY, next);
       return next;
+    });
+    setPbMs((prev) => {
+      if (prev !== null && prev <= solve.totalMs) return prev;
+      store.setJson(PB_KEY, solve.totalMs);
+      return solve.totalMs;
     });
     loadScramble();
   }
@@ -94,7 +105,8 @@ export default function SkillTimer() {
     setSolves([]);
   }
 
-  const summary = solves.length > 0 ? sessionSummary(solves) : null;
+  const summary = sessionSummary(solves);
+  const DASH = "—";
 
   return (
     <div className="screen container skill">
@@ -141,11 +153,15 @@ export default function SkillTimer() {
         </div>
       )}
 
-      {summary && (
+      {
         <div className="card session">
           <div className="session__head">
             <h3 className="session__title">This session</h3>
-            <button className="btn--ghost btn session__reset" onClick={resetSession}>
+            <button
+              className="btn--ghost btn session__reset"
+              onClick={resetSession}
+              disabled={solves.length === 0}
+            >
               Reset
             </button>
           </div>
@@ -156,15 +172,33 @@ export default function SkillTimer() {
               <span className="session__stat-value mono">{solves.length}</span>
             </div>
             <div className="session__stat">
-              <span className="session__stat-label">Average</span>
+              <span className="session__stat-label">Session best</span>
               <span className="session__stat-value mono">
-                {formatMs(summary.meanMs)}
+                {summary.bestMs !== null ? formatMs(summary.bestMs) : DASH}
               </span>
             </div>
             <div className="session__stat">
-              <span className="session__stat-label">Best</span>
+              <span className="session__stat-label">Personal best</span>
               <span className="session__stat-value mono">
-                {formatMs(summary.bestMs)}
+                {pbMs !== null ? formatMs(pbMs) : DASH}
+              </span>
+            </div>
+            <div className="session__stat">
+              <span className="session__stat-label">Average</span>
+              <span className="session__stat-value mono">
+                {summary.meanMs !== null ? formatMs(summary.meanMs) : DASH}
+              </span>
+            </div>
+            <div className="session__stat">
+              <span className="session__stat-label">Ao5</span>
+              <span className="session__stat-value mono">
+                {summary.ao5Ms !== null ? formatMs(summary.ao5Ms) : DASH}
+              </span>
+            </div>
+            <div className="session__stat">
+              <span className="session__stat-label">Ao12</span>
+              <span className="session__stat-value mono">
+                {summary.ao12Ms !== null ? formatMs(summary.ao12Ms) : DASH}
               </span>
             </div>
             {summary.breakdown && (
@@ -205,7 +239,7 @@ export default function SkillTimer() {
             </div>
           )}
         </div>
-      )}
+      }
     </div>
   );
 }
@@ -217,11 +251,29 @@ function sessionSummary(solves: PracticeSolve[]) {
     (s): s is Required<PracticeSolve> => Boolean(s.stages),
   );
   return {
-    meanMs: totals.reduce((a, b) => a + b, 0) / totals.length,
-    bestMs: Math.min(...totals),
+    meanMs: totals.length
+      ? totals.reduce((a, b) => a + b, 0) / totals.length
+      : null,
+    bestMs: totals.length ? Math.min(...totals) : null,
+    ao5Ms: rollingAverage(totals, 5),
+    ao12Ms: rollingAverage(totals, 12),
     breakdown:
       withStages.length > 0
         ? stageBreakdown(withStages.map((s) => ({ totalMs: s.totalMs, stages: s.stages })))
         : null,
   };
+}
+
+/**
+ * Rolling average of the last `n` solves, WCA-style: drop the single best and
+ * single worst, mean the middle. Sort-then-slice(1, n-1) removes exactly one
+ * best and one worst even with ties. Returns null until there are `n` solves.
+ * Practice-only (no DNFs) so no DNF handling here.
+ */
+export function rollingAverage(totalsMs: number[], n: number): number | null {
+  if (totalsMs.length < n) return null;
+  const window = totalsMs.slice(-n);
+  const sorted = [...window].sort((a, b) => a - b);
+  const middle = sorted.slice(1, n - 1);
+  return middle.reduce((a, b) => a + b, 0) / middle.length;
 }

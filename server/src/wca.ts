@@ -322,6 +322,44 @@ export async function getCompetitionEvents(
   }));
 }
 
+/**
+ * A short summary for a competition card: the 3x3 champion (winner of the
+ * final round) and how many supported events it ran. Two cached WCA calls.
+ */
+export type CompetitionHighlight = {
+  winnerName: string | null;
+  eventCount: number;
+};
+
+export async function getCompetitionHighlight(
+  id: string,
+): Promise<CompetitionHighlight> {
+  const [events, results] = await Promise.all([
+    getCompetitionEvents(id),
+    wcaFetch<WcaResult[]>(
+      `/competitions/${encodeURIComponent(id)}/results?event_id=333`,
+    ),
+  ]);
+
+  let winnerName: string | null = null;
+  const rows = (results.data ?? []).filter((r) => r.event_id === "333");
+  if (rows.length > 0) {
+    // The champion is the winner of the LAST round (highest round order).
+    const roundsPresent = [...new Set(rows.map((r) => r.round_type_id))].sort(
+      (a, b) => roundOrder(b) - roundOrder(a),
+    );
+    const finalRows = rows.filter((r) => r.round_type_id === roundsPresent[0]);
+    winnerName =
+      finalRows.find((r) => r.pos === 1)?.name ??
+      finalRows
+        .filter((r) => r.average > 0)
+        .sort((a, b) => a.average - b.average)[0]?.name ??
+      null;
+  }
+
+  return { winnerName, eventCount: events.length };
+}
+
 export type Competitor = { name: string; averageCs: number };
 
 /** The round that came after this one, and how many competitors reached it. */

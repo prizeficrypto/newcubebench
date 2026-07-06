@@ -103,7 +103,8 @@
       "Bash(ssh -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=8 -T git@github-cb2)",
       "Bash(curl -s --max-time 15 -L \"https://www.cubebench.app/api/competitions/CubingUSANationals2023/events\")",
       "Bash(git commit --allow-empty -q -m 'Trigger Vercel deploy \\(verify autodeploy on newcubebench\\) *)",
-      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{try{console.log\\('events:',\\(JSON.parse\\(d\\).events||[]\\).map\\(e=>e.id\\).join\\(', '\\)\\)}catch{console.log\\('raw:',d.slice\\(0,80\\)\\)}}\\)\")"
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{try{console.log\\('events:',\\(JSON.parse\\(d\\).events||[]\\).map\\(e=>e.id\\).join\\(', '\\)\\)}catch{console.log\\('raw:',d.slice\\(0,80\\)\\)}}\\)\")",
+      "Bash(node -e ' *)"
     ]
   }
 }

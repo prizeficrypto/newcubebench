@@ -124,6 +124,18 @@ export function getRanking(
   );
 }
 
+/**
+ * A featured competition's highlight: the 3x3 champion (null if none) and how
+ * many events it held, for the richer info cards on the picker's default view.
+ */
+export function getHighlight(id: string): Promise<{
+  competition: Competition;
+  winnerName: string | null;
+  eventCount: number;
+}> {
+  return getJson(`/api/competitions/${encodeURIComponent(id)}/highlight`);
+}
+
 export async function submitEarlyAccess(email: string): Promise<void> {
   const res = await fetch("/api/early-access", {
     method: "POST",

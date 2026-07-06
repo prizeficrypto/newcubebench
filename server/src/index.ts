@@ -31,6 +31,7 @@ import { isSupportedEvent } from "./wcaEvents.ts";
 import {
   getCompetition,
   getCompetitionEvents,
+  getCompetitionHighlight,
   getEventRanking,
   getEventRounds,
   getEventRoundScrambles,
@@ -164,6 +165,22 @@ function eventParam(req: express.Request, res: express.Response): string | null 
   }
   return event;
 }
+
+// A short summary card for a competition: location + date (from the comp) plus
+// the 3x3 champion and event count. Metadata only — not Pro-gated.
+app.get(
+  "/api/competitions/:id/highlight",
+  wrap(async (req, res) => {
+    const { id } = req.params;
+    const [comp, highlight] = await Promise.all([
+      withCache(`comp:${id}`, TTL.SHORT_MS, () => getCompetition(id)),
+      withCache(`highlight:${id}`, TTL.LONG_MS, () =>
+        getCompetitionHighlight(id),
+      ),
+    ]);
+    res.json({ competition: comp, ...highlight });
+  }),
+);
 
 // Which supported events this competition held (with a full scramble set).
 app.get(
