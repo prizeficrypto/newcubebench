@@ -19,11 +19,15 @@ export function CompTimer({
   solveIndex,
   totalSolves,
   onComplete,
+  practice = false,
 }: {
   scramble: string;
   solveIndex: number;
   totalSolves: number;
   onComplete: (attempt: Attempt) => void;
+  /** unlimited-practice mode (standalone Timer): no "of N", button reads
+   *  "Solve again" instead of advancing a fixed round */
+  practice?: boolean;
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsed, setElapsed] = useState(0);
@@ -131,7 +135,7 @@ export function CompTimer({
     <div className="solve">
       <div className="solve__head">
         <span className="eyebrow">
-          Solve {solveIndex + 1} of {totalSolves}
+          {practice ? `Solve ${solveIndex + 1}` : `Solve ${solveIndex + 1} of ${totalSolves}`}
         </span>
         <div className="solve__scramble mono">{scramble}</div>
       </div>
@@ -209,7 +213,7 @@ export function CompTimer({
             </button>
           </div>
           <button className="btn" onClick={() => onComplete(result)} autoFocus>
-            {isLast ? "See your ranking" : "Next solve"}
+            {practice ? "Solve again" : isLast ? "See your ranking" : "Next solve"}
           </button>
         </div>
       )}

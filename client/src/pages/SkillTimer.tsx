@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { CompTimer } from "../components/CompTimer.tsx";
 import { SolveTimer } from "../components/SolveTimer.tsx";
 import { nextScramble, warmUp } from "../lib/scrambles.ts";
 import { store } from "../lib/store.ts";
@@ -7,46 +8,35 @@ import {
   stageBreakdown,
   STAGE_LABEL,
   STAGE_ORDER,
+  type Attempt,
   type Solve,
 } from "../lib/cubing.ts";
 
 /**
- * Skill Timer: unlimited stage-split practice. Spacebar taps mark the end of
- * each stage (cross, F2L, OLL, PLL); every solve adds to a running session
- * summary showing where the time is going. Scrambles are proper random-state
- * 3x3 scrambles from cubing.js.
+ * The Timer: free-form 3x3 practice, unlimited solves.
+ *
+ *   Regular — one start, one stop. A plain solve timer (default).
+ *   Skill Timer — tap the spacebar at the end of each stage (cross, F2L, OLL,
+ *                 PLL); the session summary then shows where your time goes.
+ *
+ * The session (either kind of solve) survives navigation and refresh.
  */
-const INTRO_SEEN_KEY = "cb_skill_intro_seen";
-const SESSION_KEY = "cb_skill_session_v1";
+const SESSION_KEY = "cb_timer_session_v2";
+
+type Mode = "regular" | "skill";
+/** A practice solve. Stage splits are present only for Skill-Timer solves. */
+type PracticeSolve = { totalMs: number; stages?: Solve["stages"] };
 
 export default function SkillTimer() {
+  const [mode, setMode] = useState<Mode>("regular");
   const [scramble, setScramble] = useState<string | null>(null);
-  const [scrambleError, setScrambleError] = useState<string | null>(null);
-  // The session survives navigation and refresh — practice shouldn't
-  // evaporate because you glanced at Pricing.
-  const [solves, setSolves] = useState<Solve[]>(
-    () => store.getJson<Solve[]>(SESSION_KEY) ?? [],
+  const [solves, setSolves] = useState<PracticeSolve[]>(
+    () => store.getJson<PracticeSolve[]>(SESSION_KEY) ?? [],
   );
-  // First visit: explain what the Skill Timer is before the timer takes over.
-  const [showIntro, setShowIntro] = useState(
-    () => store.get(INTRO_SEEN_KEY) !== "1",
-  );
-
-  function dismissIntro() {
-    store.set(INTRO_SEEN_KEY, "1");
-    setShowIntro(false);
-  }
 
   const loadScramble = useCallback(() => {
     setScramble(null);
-    setScrambleError(null);
-    nextScramble()
-      .then(setScramble)
-      .catch((err) =>
-        setScrambleError(
-          err instanceof Error ? err.message : "Could not generate a scramble",
-        ),
-      );
+    nextScramble().then(setScramble);
   }, []);
 
   useEffect(() => {
@@ -54,13 +44,26 @@ export default function SkillTimer() {
     loadScramble();
   }, [loadScramble]);
 
-  function handleComplete(solve: Solve) {
+  function record(solve: PracticeSolve) {
     setSolves((prev) => {
       const next = [...prev, solve];
       store.setJson(SESSION_KEY, next);
       return next;
     });
     loadScramble();
+  }
+
+  function handleRegular(a: Attempt) {
+    // Skip DNFs from the practice stats; +2 folds into the time.
+    if (a.dnf) {
+      loadScramble();
+      return;
+    }
+    record({ totalMs: a.rawMs + (a.plus2 ? 2000 : 0) });
+  }
+
+  function handleSkill(solve: Solve) {
+    record({ totalMs: solve.totalMs, stages: solve.stages });
   }
 
   function resetSession() {
@@ -78,69 +81,47 @@ export default function SkillTimer() {
 
   const summary = solves.length > 0 ? sessionSummary(solves) : null;
 
-  if (showIntro) {
-    return (
-      <div className="screen container container--gate skill-intro">
-        <span className="eyebrow">Skill Timer</span>
-        <h1 className="title">Find out where your solve is slow.</h1>
-        <p className="muted gate__sub">
-          The Skill Timer times every stage of your solve separately. One tap
-          of the spacebar at the end of each stage splits your solve into its
-          four phases:
-        </p>
-        <ol className="stage-list">
-          {(
-            [
-              ["1", "Cross", "your first four edges"],
-              ["2", "F2L", "first two layers"],
-              ["3", "OLL", "orienting the last layer"],
-              ["4", "PLL", "permuting the last layer, and the solve is done"],
-            ] as const
-          ).map(([n, name, desc]) => (
-            <li className="stage-list__row" key={n}>
-              <span className="stage-list__n mono" aria-hidden="true">
-                {n}
-              </span>
-              <span className="stage-list__name">{name}</span>
-              <span className="muted stage-list__desc">{desc}</span>
-            </li>
-          ))}
-        </ol>
-        <p className="muted gate__sub">
-          Solve as much as you like. The session summary shows which stage is
-          eating the biggest share of your time. Scrambles are random-state,
-          the same kind you'd get in an official round.
-        </p>
-        <button className="btn" onClick={dismissIntro} autoFocus>
-          Got it, start practicing
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="screen container skill">
-      {scramble && (
-        <SolveTimer
-          scramble={scramble}
-          solveNumber={solves.length + 1}
-          onComplete={handleComplete}
-        />
-      )}
+      <div className="timer-mode" role="group" aria-label="Timer mode">
+        <button
+          className={`timer-mode__btn${mode === "regular" ? " is-active" : ""}`}
+          onClick={() => setMode("regular")}
+          aria-pressed={mode === "regular"}
+        >
+          Regular
+        </button>
+        <button
+          className={`timer-mode__btn${mode === "skill" ? " is-active" : ""}`}
+          onClick={() => setMode("skill")}
+          aria-pressed={mode === "skill"}
+        >
+          Skill Timer
+        </button>
+      </div>
 
-      {!scramble && !scrambleError && (
+      {scramble ? (
+        mode === "skill" ? (
+          <SolveTimer
+            key={`s-${solves.length}`}
+            scramble={scramble}
+            solveNumber={solves.length + 1}
+            onComplete={handleSkill}
+          />
+        ) : (
+          <CompTimer
+            key={`r-${solves.length}`}
+            scramble={scramble}
+            solveIndex={solves.length}
+            totalSolves={solves.length + 1}
+            practice
+            onComplete={handleRegular}
+          />
+        )
+      ) : (
         <div className="skill__loading">
           <div className="spinner" />
-          <p className="muted">Generating a random-state scramble…</p>
-        </div>
-      )}
-
-      {scrambleError && (
-        <div className="skill__loading">
-          <p className="muted">Scramble generation failed: {scrambleError}</p>
-          <button className="btn btn--secondary" onClick={loadScramble}>
-            Try again
-          </button>
+          <p className="muted">Generating a scramble…</p>
         </div>
       )}
 
@@ -170,49 +151,61 @@ export default function SkillTimer() {
                 {formatMs(summary.bestMs)}
               </span>
             </div>
-            <div className="session__stat">
-              <span className="session__stat-label">Focus on</span>
-              <span className="session__stat-value">
-                {STAGE_LABEL[summary.breakdown.slowest]}{" "}
-                <span className="muted mono session__pct">
-                  {Math.round(summary.breakdown.slowestShare * 100)}%
+            {summary.breakdown && (
+              <div className="session__stat">
+                <span className="session__stat-label">Focus on</span>
+                <span className="session__stat-value">
+                  {STAGE_LABEL[summary.breakdown.slowest]}{" "}
+                  <span className="muted mono session__pct">
+                    {Math.round(summary.breakdown.slowestShare * 100)}%
+                  </span>
                 </span>
-              </span>
-            </div>
+              </div>
+            )}
           </div>
 
-          <div className="breakdown__bars">
-            {STAGE_ORDER.map((key) => {
-              const share = summary.breakdown.grandTotalMs
-                ? summary.breakdown.totals[key] / summary.breakdown.grandTotalMs
-                : 0;
-              return (
-                <div key={key} className="breakdown__row">
-                  <span className="breakdown__label">{STAGE_LABEL[key]}</span>
-                  <div className="breakdown__track">
-                    <div
-                      className={`breakdown__fill${key === summary.breakdown.slowest ? " is-slowest" : ""}`}
-                      style={{ width: `${Math.max(share * 100, 1.5)}%` }}
-                    />
+          {summary.breakdown && (
+            <div className="breakdown__bars">
+              {STAGE_ORDER.map((key) => {
+                const share = summary.breakdown!.grandTotalMs
+                  ? summary.breakdown!.totals[key] /
+                    summary.breakdown!.grandTotalMs
+                  : 0;
+                return (
+                  <div key={key} className="breakdown__row">
+                    <span className="breakdown__label">{STAGE_LABEL[key]}</span>
+                    <div className="breakdown__track">
+                      <div
+                        className={`breakdown__fill${key === summary.breakdown!.slowest ? " is-slowest" : ""}`}
+                        style={{ width: `${Math.max(share * 100, 1.5)}%` }}
+                      />
+                    </div>
+                    <span className="breakdown__pct mono">
+                      {Math.round(share * 100)}%
+                    </span>
                   </div>
-                  <span className="breakdown__pct mono">
-                    {Math.round(share * 100)}%
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function sessionSummary(solves: Solve[]) {
+function sessionSummary(solves: PracticeSolve[]) {
   const totals = solves.map((s) => s.totalMs);
+  // Stage breakdown only from Skill-Timer solves (the ones with splits).
+  const withStages = solves.filter(
+    (s): s is Required<PracticeSolve> => Boolean(s.stages),
+  );
   return {
     meanMs: totals.reduce((a, b) => a + b, 0) / totals.length,
     bestMs: Math.min(...totals),
-    breakdown: stageBreakdown(solves),
+    breakdown:
+      withStages.length > 0
+        ? stageBreakdown(withStages.map((s) => ({ totalMs: s.totalMs, stages: s.stages })))
+        : null,
   };
 }
