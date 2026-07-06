@@ -3,26 +3,16 @@ import { formatAttempt, formatMs, type Attempt } from "../lib/cubing.ts";
 import { isTouchDevice } from "../lib/pointer.ts";
 
 /**
- * Competition timer following standard cubing (csTimer) conventions:
+ * Plain solve timer — one start, one stop, no inspection or per-step taps:
  *
- *   idle        — scramble shown. Space (or tap) starts inspection.
- *   inspection  — 15s WCA inspection counts down. Hold spacebar: the time
- *                 turns red; after HOLD_TO_ARM_MS it turns green (armed).
- *                 RELEASE to start the solve. Releasing early cancels back
- *                 to inspection, which keeps counting.
- *   running     — any key (or tap) stops.
- *   done        — result shown; penalty applied if the solve started more
- *                 than 15.00s after inspection began (+2, kept simple: no
- *                 DNF tier).
+ *   idle     — scramble shown. Press space (or tap) to start immediately.
+ *   running  — press any key (or tap) to stop.
+ *   done     — result shown; +2 / DNF can be marked by hand.
  *
- * Touch drives the same machine: tap = start inspection, press-and-hold +
- * release = arm/start, tap while running = stop.
+ * (Stage-split timing lives in the separate "Skill Timer" mode, toggled on the
+ * solving screen.)
  */
-
-const INSPECTION_MS = 15_000;
-const HOLD_TO_ARM_MS = 550;
-
-type Phase = "idle" | "inspection" | "running" | "done";
+type Phase = "idle" | "running" | "done";
 
 export function CompTimer({
   scramble,
@@ -36,142 +26,49 @@ export function CompTimer({
   onComplete: (attempt: Attempt) => void;
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
-  /** 15, 14, … seconds remaining; negative means over (penalty zone) */
-  const [inspectionLeft, setInspectionLeft] = useState(15);
-  /** mirrors the exact penalty test (strictly > 15.00s), for the display */
-  const [overInspection, setOverInspection] = useState(false);
-  const [holdState, setHoldState] = useState<"none" | "holding" | "armed">(
-    "none",
-  );
   const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState<Attempt | null>(null);
-  // Phrase instructions for the device in hand ("tap" vs "space").
   const [touch] = useState(isTouchDevice);
 
-  const inspectionStartRef = useRef<number | null>(null);
   const solveStartRef = useRef<number | null>(null);
-  const penaltyRef = useRef(false);
-  /** when the current spacebar/touch hold began; null when not holding */
-  const holdStartAtRef = useRef<number | null>(null);
-  /** which input started the hold — a pointer event may only cancel a
-   *  pointer hold, and a second source can't restart the arming clock */
-  const holdSourceRef = useRef<"key" | "pointer" | null>(null);
-  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rafRef = useRef<number | null>(null);
-  // Set when the running timer is stopped by a keydown, so the paired keyup
-  // isn't misread as a "release to start" in some later state.
-  const spaceIsDownRef = useRef(false);
-  /** when the solve was stopped — guards the just-pressed/held stop key from
-   *  immediately activating the autofocused "Next solve" button */
+  /** when the solve was stopped — guards the stop key/tap from immediately
+   *  activating the autofocused "Next solve" button */
   const stoppedAtRef = useRef(0);
 
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
 
-  const clearHoldTimer = () => {
-    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-    holdTimerRef.current = null;
-  };
   const stopRaf = () => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
   };
 
   const resetSolve = useCallback(() => {
-    clearHoldTimer();
     stopRaf();
     setPhase("idle");
-    setInspectionLeft(15);
-    setOverInspection(false);
-    setHoldState("none");
     setElapsed(0);
     setResult(null);
-    inspectionStartRef.current = null;
     solveStartRef.current = null;
-    penaltyRef.current = false;
-    spaceIsDownRef.current = false;
-    holdStartAtRef.current = null;
-    holdSourceRef.current = null;
   }, []);
 
   // Full reset when the scramble/solve changes.
   useEffect(() => {
     resetSolve();
-    return () => {
-      clearHoldTimer();
-      stopRaf();
-    };
+    return () => stopRaf();
   }, [solveIndex, scramble, resetSolve]);
 
-  // Inspection countdown ticker (also runs while holding/armed).
-  useEffect(() => {
-    if (phase !== "inspection") return;
-    const id = setInterval(() => {
-      const start = inspectionStartRef.current;
-      if (start == null) return;
-      const elapsed = performance.now() - start;
-      setInspectionLeft(Math.ceil((INSPECTION_MS - elapsed) / 1000));
-      // Same strict comparison the penalty itself uses at solve start.
-      setOverInspection(elapsed > INSPECTION_MS);
-    }, 100);
-    return () => clearInterval(id);
-  }, [phase]);
-
-  // Running stopwatch display.
   const tick = useCallback(() => {
     const start = solveStartRef.current;
     if (start != null) setElapsed(performance.now() - start);
     rafRef.current = requestAnimationFrame(tick);
   }, []);
 
-  // ---- transitions ----
-
-  const beginInspection = useCallback(() => {
-    inspectionStartRef.current = performance.now();
-    setInspectionLeft(15);
-    setPhase("inspection");
-  }, []);
-
-  const beginHold = useCallback((source: "key" | "pointer") => {
-    // A hold is already in progress from another (or the same) source —
-    // ignore it rather than restarting the arming clock.
-    if (holdStartAtRef.current != null) return;
-    holdSourceRef.current = source;
-    holdStartAtRef.current = performance.now();
-    setHoldState("holding");
-    // The timeout only drives the red->green visual. The actual decision is
-    // made at release time from the real held duration, so a throttled or
-    // late timer can never swallow a legitimate start.
-    clearHoldTimer();
-    holdTimerRef.current = setTimeout(() => {
-      setHoldState("armed");
-    }, HOLD_TO_ARM_MS);
-  }, []);
-
-  const releaseHold = useCallback((source: "key" | "pointer") => {
-    // Only the input that started the hold may end it.
-    if (holdSourceRef.current !== source) return;
-    clearHoldTimer();
-    const heldFor =
-      holdStartAtRef.current != null
-        ? performance.now() - holdStartAtRef.current
-        : 0;
-    holdStartAtRef.current = null;
-    holdSourceRef.current = null;
-    if (heldFor >= HOLD_TO_ARM_MS) {
-      // Start the solve. Penalty decided at this exact moment.
-      const now = performance.now();
-      const inspStart = inspectionStartRef.current ?? now;
-      penaltyRef.current = now - inspStart > INSPECTION_MS;
-      solveStartRef.current = now;
-      setHoldState("none");
-      setElapsed(0);
-      setPhase("running");
-      rafRef.current = requestAnimationFrame(tick);
-    } else {
-      // Released before armed — back to inspection (still counting).
-      setHoldState("none");
-    }
+  const startSolve = useCallback(() => {
+    solveStartRef.current = performance.now();
+    setElapsed(0);
+    setPhase("running");
+    rafRef.current = requestAnimationFrame(tick);
   }, [tick]);
 
   const stopSolve = useCallback(() => {
@@ -181,9 +78,8 @@ export function CompTimer({
     const now = performance.now();
     stoppedAtRef.current = now;
     const rawMs = now - start;
-    const attempt: Attempt = { rawMs, plus2: penaltyRef.current };
     setElapsed(rawMs);
-    setResult(attempt);
+    setResult({ rawMs, plus2: false });
     setPhase("done");
   }, []);
 
@@ -199,68 +95,35 @@ export function CompTimer({
         return;
       }
       if (p === "done") {
-        // Swallow auto-repeat of the held stop key (and any press within a
-        // short grace window) so it can't click the autofocused Next button.
+        // Swallow the stop key's auto-repeat / a press within a short grace
+        // window so it can't click the autofocused Next button.
         if (e.repeat || performance.now() - stoppedAtRef.current < 400) {
           e.preventDefault();
         }
         return;
       }
+      // idle: space starts
       if (e.code !== "Space" && e.key !== " ") return;
-      e.preventDefault(); // keep space from scrolling / clicking
+      e.preventDefault();
       if (e.repeat) return;
-      spaceIsDownRef.current = true;
-      if (p === "idle") beginInspection();
-      else if (p === "inspection") beginHold("key");
-    };
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (e.code !== "Space" && e.key !== " ") return;
-      if (!spaceIsDownRef.current) return; // stray keyup (e.g. after a stop)
-      spaceIsDownRef.current = false;
-      if (phaseRef.current === "inspection") releaseHold("key");
+      startSolve();
     };
     window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-    };
-  }, [beginInspection, beginHold, releaseHold, stopSolve]);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [startSolve, stopSolve]);
 
   // ---- touch / pointer on the timer zone ----
+  // Start fires on release (tap-to-start); stop fires on press, so the stop
+  // tap's release can't land on the Next button that appears afterward.
+  const onZonePointerUp = useCallback(() => {
+    if (phaseRef.current === "idle") startSolve();
+  }, [startSolve]);
 
   const onZonePointerDown = useCallback(() => {
-    const p = phaseRef.current;
-    if (p === "running") stopSolve();
-    else if (p === "inspection") beginHold("pointer");
-  }, [beginHold, stopSolve]);
-
-  const onZonePointerUp = useCallback(() => {
-    const p = phaseRef.current;
-    if (p === "idle") beginInspection(); // tap-to-begin fires on release
-    else if (p === "inspection") releaseHold("pointer");
-  }, [beginInspection, releaseHold]);
-
-  // A POINTER hold that never completes (finger slides off, gesture
-  // canceled) cancels cleanly back to inspection. A keyboard hold is not
-  // touched — a drifting cursor must never eat a spacebar start.
-  const onZonePointerCancel = useCallback(() => {
-    if (phaseRef.current !== "inspection") return;
-    if (holdSourceRef.current !== "pointer") return;
-    clearHoldTimer();
-    holdStartAtRef.current = null;
-    holdSourceRef.current = null;
-    setHoldState("none");
-  }, []);
+    if (phaseRef.current === "running") stopSolve();
+  }, [stopSolve]);
 
   // ---- render ----
-
-  const timeClass =
-    holdState === "armed"
-      ? " is-armed"
-      : holdState === "holding"
-        ? " is-holding"
-        : "";
 
   const isLast = solveIndex === totalSolves - 1;
 
@@ -277,39 +140,14 @@ export function CompTimer({
         className={`timer-zone timer-zone--${phase}`}
         onPointerDown={onZonePointerDown}
         onPointerUp={onZonePointerUp}
-        onPointerCancel={onZonePointerCancel}
-        onPointerLeave={onZonePointerCancel}
       >
         {phase === "idle" && (
           <div className="timer">
             <div className="timer__time mono">0.00</div>
             <div className="timer__hint" role="status" aria-live="polite">
               {touch
-                ? "Tap to start inspection. You get 15 seconds, like a real round."
-                : "Press space to start inspection. You get 15 seconds, like a real round."}
-            </div>
-          </div>
-        )}
-
-        {phase === "inspection" && (
-          <div className="timer">
-            <div
-              className={`timer__time mono inspection__count${overInspection ? " is-over" : ""}${timeClass}`}
-            >
-              {holdState !== "none"
-                ? "0.00"
-                : overInspection
-                  ? "+2"
-                  : inspectionLeft}
-            </div>
-            <div className="timer__hint" role="status" aria-live="polite">
-              {holdState === "armed"
-                ? "Release to start"
-                : holdState === "holding"
-                  ? "Keep holding…"
-                  : overInspection
-                    ? `Over 15 seconds, so this solve is +2. ${touch ? "Press and hold" : "Hold space"}, release to start.`
-                    : `Inspecting. ${touch ? "Press and hold" : "Hold space"}, then release to start.`}
+                ? "Tap the screen to start. Tap again to stop."
+                : "Press space to start. Press any key to stop."}
             </div>
           </div>
         )}
@@ -325,17 +163,15 @@ export function CompTimer({
 
         {phase === "done" && result && (
           <div className="timer timer--done">
-            {/* the headline is the OFFICIAL time — penalized shows "20.00+"
-                here exactly as it will on the results screen */}
+            {/* headline is the OFFICIAL time — a penalized solve reads "20.00+"
+                here exactly as on the results screen */}
             <div className="timer__time mono">{formatAttempt(result)}</div>
             <div className="timer__hint" role="status" aria-live="polite">
               {result.dnf
                 ? "Marked as DNF, so it won't count as a time"
-                : penaltyRef.current
-                  ? `Inspection ran past 15 seconds. +2 included (stopwatch read ${formatMs(result.rawMs)})`
-                  : result.plus2
-                    ? `+2 applied (stopwatch read ${formatMs(result.rawMs)})`
-                    : "Solve complete"}
+                : result.plus2
+                  ? `+2 applied (stopwatch read ${formatMs(result.rawMs)})`
+                  : "Solve complete"}
             </div>
           </div>
         )}
@@ -354,12 +190,7 @@ export function CompTimer({
             <button
               className={`post__chip post__chip--plus2${result.plus2 ? " is-on" : ""}`}
               aria-pressed={result.plus2}
-              disabled={penaltyRef.current}
-              title={
-                penaltyRef.current
-                  ? "Automatic: inspection ran past 15 seconds"
-                  : "Mark a +2 penalty on this attempt"
-              }
+              title="Mark a +2 penalty on this attempt"
               onClick={() =>
                 setResult((r) => (r ? { ...r, plus2: !r.plus2 } : r))
               }

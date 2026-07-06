@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getRanking,
   type Competition,
   type RankingData,
   type RoundScrambleSet,
 } from "../lib/api.ts";
+import { useAuth } from "../lib/auth.tsx";
 import {
   attemptCs,
   formatAttempt,
@@ -13,6 +15,7 @@ import {
 } from "../lib/cubing.ts";
 import type { ClientEvent } from "../lib/events.ts";
 import { CompTimer } from "./CompTimer.tsx";
+import { SolveTimer } from "./SolveTimer.tsx";
 
 /**
  * A round in progress. The screen stays purposeful even before the timer runs:
@@ -41,6 +44,21 @@ export function Solving({
   onAttempt: (attempt: Attempt) => void;
   onBack: () => void;
 }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const isPro = Boolean(user?.pro);
+  // Skill Timer (stage-split) mode is a Pro feature; flipping it on without
+  // Pro sends the user to Pricing instead.
+  const [skill, setSkill] = useState(false);
+
+  function chooseTimer(next: boolean) {
+    if (next && !isPro) {
+      navigate("/app/pricing");
+      return;
+    }
+    setSkill(next);
+  }
+
   const requiredAttempts = event.solves;
   const solveScrambles = scrambles.slice(0, requiredAttempts);
   const total = solveScrambles.length;
@@ -68,13 +86,42 @@ export function Solving({
         </div>
       </div>
 
-      <CompTimer
-        key={index}
-        scramble={solveScrambles[index]}
-        solveIndex={index}
-        totalSolves={total}
-        onComplete={onAttempt}
-      />
+      <div className="timer-mode" role="group" aria-label="Timer mode">
+        <button
+          className={`timer-mode__btn${!skill ? " is-active" : ""}`}
+          onClick={() => chooseTimer(false)}
+          aria-pressed={!skill}
+        >
+          Regular
+        </button>
+        <button
+          className={`timer-mode__btn${skill ? " is-active" : ""}`}
+          onClick={() => chooseTimer(true)}
+          aria-pressed={skill}
+        >
+          Skill Timer
+          {!isPro && <span className="timer-mode__pro">Pro</span>}
+        </button>
+      </div>
+
+      {skill && isPro ? (
+        <SolveTimer
+          key={index}
+          scramble={solveScrambles[index]}
+          solveNumber={index + 1}
+          onComplete={(solve) =>
+            onAttempt({ rawMs: solve.totalMs, plus2: false })
+          }
+        />
+      ) : (
+        <CompTimer
+          key={index}
+          scramble={solveScrambles[index]}
+          solveIndex={index}
+          totalSolves={total}
+          onComplete={onAttempt}
+        />
+      )}
 
       <RunningAverage attempts={attempts} event={event} total={total} />
       <UpAgainst comp={comp} event={event} round={round} />

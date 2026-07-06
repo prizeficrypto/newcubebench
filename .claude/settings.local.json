@@ -92,7 +92,18 @@
       "Bash(curl -s --max-time 20 -L -X POST https://www.cubebench.app/api/auth/signup -H 'Content-Type: application/json' -d '{\"email\":\"__TRACKED_VAR__\",\"password\":\"testpass123\",\"name\":\"Live Test\"}')",
       "Bash(node --env-file=server/.env server/src/index.ts)",
       "Bash(curl -s --max-time 25 localhost:4000/api/competitions/__TRACKED_VAR__/events)",
-      "Bash(node --experimental-strip-types src/lib/cubing.test.ts)"
+      "Bash(node --experimental-strip-types src/lib/cubing.test.ts)",
+      "Bash(curl -s --max-time 25 -L \"https://www.cubebench.app/api/competitions/CubingUSANationals2023/events\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{try{const j=JSON.parse\\(d\\);console.log\\('events:',\\(j.events||[]\\).map\\(e=>e.id\\).join\\(', '\\)||'none', '| err:', j.error||'—'\\)}catch\\(e\\){console.log\\('raw:',d.slice\\(0,150\\)\\)}}\\)\")",
+      "Bash(curl -s --max-time 25 -L \"https://www.cubebench.app/api/competitions/CubingUSANationals2023/rounds?event=666\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{try{const j=JSON.parse\\(d\\);console.log\\('available:',j.available,'rounds:',\\(j.rounds||[]\\).length\\)}catch\\(e\\){console.log\\('raw:',d.slice\\(0,150\\)\\)}}\\)\")",
+      "Bash(ssh-keygen -t ed25519 -C \"cubebench-other-account\" -f ~/.ssh/id_ed25519_cb2 -N \"\" -q)",
+      "Bash(touch ~/.ssh/config)",
+      "Bash(chmod 600 ~/.ssh/config)",
+      "Bash(ssh -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=8 -T git@github-cb2)",
+      "Bash(curl -s --max-time 15 -L \"https://www.cubebench.app/api/competitions/CubingUSANationals2023/events\")",
+      "Bash(git commit --allow-empty -q -m 'Trigger Vercel deploy \\(verify autodeploy on newcubebench\\) *)",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{try{console.log\\('events:',\\(JSON.parse\\(d\\).events||[]\\).map\\(e=>e.id\\).join\\(', '\\)\\)}catch{console.log\\('raw:',d.slice\\(0,80\\)\\)}}\\)\")"
     ]
   }
 }

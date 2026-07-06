@@ -388,7 +388,14 @@ function EventChooser({
               onClick={() => onChoose(e)}
             >
               <span className="lvl__label">{ev.display}</span>
-              <span className="lvl__range mono">{ev.formatName} ›</span>
+              <span className="ev-fmt">
+                <span className="ev-fmt__tag">
+                  {ev.format === "mo3" ? "Mean of 3" : "Average of 5"}
+                </span>
+                <span className="ev-fmt__chev" aria-hidden="true">
+                  ›
+                </span>
+              </span>
             </button>
           );
         })}

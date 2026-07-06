@@ -1146,6 +1146,71 @@
   font-weight: 500;
 }
 
+/* event chooser: calm format hint + chevron (not mono prose) */
+.ev-fmt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ev-fmt__tag {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.ev-fmt__chev {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-tertiary);
+}
+
+/* solving screen: Regular / Skill Timer mode toggle (Skill Timer is Pro) */
+.timer-mode {
+  display: flex;
+  width: fit-content;
+  margin: 0 auto 6px;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--accent-soft);
+}
+
+.timer-mode__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 7px 16px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background var(--speed-ui) var(--ease-out),
+    color var(--speed-ui) var(--ease-out);
+}
+
+.timer-mode__btn.is-active {
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(23, 23, 26, 0.1);
+}
+
+.timer-mode__pro {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
 .gate__skip {
   appearance: none;
   background: none;
