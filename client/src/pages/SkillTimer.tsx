@@ -43,6 +43,10 @@ export default function SkillTimer() {
   // Skill Timer (stage splits) is a Pro feature — non-Pro users are sent to
   // Pricing instead of switching modes.
   function chooseMode(next: Mode) {
+    if (next === "skill" && !user) {
+      navigate("/join"); // guests: create an account first
+      return;
+    }
     if (next === "skill" && !isPro) {
       navigate("/app/pricing");
       return;

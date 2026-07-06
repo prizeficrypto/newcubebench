@@ -1,7 +1,17 @@
-import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
-import { AuthProvider } from "./lib/auth.tsx";
+import { useEffect } from "react";
+import {
+  BrowserRouter,
+  Link,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+} from "react-router-dom";
+import { AuthProvider, useAuth } from "./lib/auth.tsx";
 import { NavBar } from "./components/NavBar.tsx";
 import { AppShell } from "./components/AppShell.tsx";
+import { Onboarding } from "./components/Onboarding.tsx";
+import { Mark } from "./components/Mark.tsx";
 import Home from "./pages/Home.tsx";
 import Simulator from "./pages/Simulator.tsx";
 import SkillTimer from "./pages/SkillTimer.tsx";
@@ -31,6 +41,10 @@ export default function App() {
             }
           />
 
+          {/* Sign-up / sign-in screen. Guests are sent here from the app's
+              "create an account to do more" walls. */}
+          <Route path="/join" element={<JoinScreen />} />
+
           <Route path="/app" element={<AppShell />}>
             <Route index element={<Simulator />} />
             <Route path="skill-timer" element={<SkillTimer />} />
@@ -46,6 +60,34 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+  );
+}
+
+/**
+ * The account screen (sign up / sign in, then the quick profile). Once the
+ * user is signed in with a profile, bounce them into the app. Guests reach
+ * this from the "create an account to do more" prompts.
+ */
+function JoinScreen() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (user && user.profile.avg333) navigate("/app", { replace: true });
+  }, [user, navigate]);
+  return (
+    <>
+      <header className="nav">
+        <nav className="nav__inner container">
+          <Link to="/" className="nav__wordmark">
+            <Mark className="nav__mark" size={15} />
+            Cube Bench
+          </Link>
+        </nav>
+      </header>
+      <main className="app">
+        <Onboarding />
+      </main>
+    </>
   );
 }
 

@@ -112,9 +112,17 @@ export function CompetitionPicker({
 
   async function select(comp: Competition) {
     if (selectingId || unavailable[comp.id]) return;
-    if (!FEATURED_COMP_IDS.has(comp.id) && !isPro) {
-      navigate("/app/pricing");
-      return;
+    if (!FEATURED_COMP_IDS.has(comp.id)) {
+      // The full library is beyond the featured free comps: guests sign up
+      // first, signed-in free users see the Pro upgrade.
+      if (!user) {
+        navigate("/join");
+        return;
+      }
+      if (!isPro) {
+        navigate("/app/pricing");
+        return;
+      }
     }
     setSelectingId(comp.id);
     try {

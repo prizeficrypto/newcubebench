@@ -1,12 +1,12 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../lib/auth.tsx";
-import { Onboarding } from "./Onboarding.tsx";
 import { Mark } from "./Mark.tsx";
 
 /**
- * Everything behind "Launch App". Until a signed-in user with a profile
- * exists, this renders the onboarding gate instead of the app — competition
- * listings and both timers live on the other side.
+ * Everything behind "Launch App". Open to guests — they can run the featured
+ * competitions and the regular timer without an account; the "create an
+ * account to do more" walls send them to /join. Signed-in users get their
+ * profile chip and sign-out.
  */
 export function AppShell() {
   const { user, loading, signOut } = useAuth();
@@ -19,27 +19,7 @@ export function AppShell() {
     );
   }
 
-  const needsOnboarding = !user || !user.profile.avg333;
-  if (needsOnboarding) {
-    return (
-      <>
-        {/* minimal branded header so the gate still feels like Cube Bench */}
-        <header className="nav">
-          <nav className="nav__inner container">
-            <NavLink to="/" className="nav__wordmark">
-              <Mark className="nav__mark" size={15} />
-              Cube Bench
-            </NavLink>
-          </nav>
-        </header>
-        <main className="app">
-          <Onboarding />
-        </main>
-      </>
-    );
-  }
-
-  const shownName = user.profile.displayName ?? user.name;
+  const shownName = user ? (user.profile.displayName ?? user.name) : "";
   const initials = shownName
     .split(/\s+/)
     .filter(Boolean)
@@ -75,16 +55,27 @@ export function AppShell() {
             >
               Pricing
             </NavLink>
-            <span className="nav__user-chip" title={user.email}>
-              <span className="nav__avatar" aria-hidden="true">
-                {initials || "?"}
-              </span>
-              <span className="nav__username tertiary">{shownName}</span>
-              {user.pro && <span className="nav__pro">Pro</span>}
-            </span>
-            <button className="nav__link nav__signout" onClick={() => signOut()}>
-              Sign out
-            </button>
+            {user ? (
+              <>
+                <span className="nav__user-chip" title={user.email}>
+                  <span className="nav__avatar" aria-hidden="true">
+                    {initials || "?"}
+                  </span>
+                  <span className="nav__username tertiary">{shownName}</span>
+                  {user.pro && <span className="nav__pro">Pro</span>}
+                </span>
+                <button
+                  className="nav__link nav__signout"
+                  onClick={() => signOut()}
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <Link to="/join" className="btn nav__join">
+                Create account
+              </Link>
+            )}
           </div>
         </nav>
       </header>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getRounds,
   getRound,
@@ -7,6 +8,7 @@ import {
   type RoundMeta,
   type RoundScrambleSet,
 } from "../lib/api.ts";
+import { useAuth } from "../lib/auth.tsx";
 import type { Attempt } from "../lib/cubing.ts";
 import { eventOrDefault, type ClientEvent } from "../lib/events.ts";
 import { store } from "../lib/store.ts";
@@ -43,6 +45,8 @@ type SavedRound = {
  * refresh resumes rather than losing solves.
  */
 export default function Simulator() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [step, setStep] = useState<Step>("picking");
   const [comp, setComp] = useState<Competition | null>(null);
   const [events, setEvents] = useState<EventMeta[]>([]);
@@ -98,6 +102,11 @@ export default function Simulator() {
   // scrambles in the background so continuing is instant (smooth, no spinner).
   function advance(roundTypeId: string, roundName: string) {
     if (!comp) return;
+    // Advancing to the next round is an account feature — guests sign up.
+    if (!user) {
+      navigate("/join");
+      return;
+    }
     // Already loaded this exact round (e.g. returned from "Back to results"
     // and clicked again): reuse it, no refetch, no loading flash.
     if (advanceTo?.roundTypeId === roundTypeId && advanceRound) {
