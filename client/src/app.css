@@ -2499,10 +2499,66 @@
 /* ---------- skill timer session ---------- */
 
 .skill {
+  display: block;
+}
+
+/* Two-panel dashboard: timer on the left, live analytics on the right.
+   Stacks on narrow screens. */
+.skill__layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 22px;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .skill__layout {
+    grid-template-columns: minmax(0, 1.2fr) minmax(340px, 1fr);
+    gap: 32px;
+  }
+}
+
+.skill__main {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  min-width: 0;
+}
+
+.skill__side {
+  min-width: 0;
+}
+
+/* recent solves — a calm wrapped strip in the analytics panel */
+.recent {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recent__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+
+.recent__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.recent__n {
+  font-size: 11px;
 }
 
 .skill__loading {
@@ -2515,9 +2571,14 @@
 
 .session {
   width: 100%;
-  max-width: 560px;
   padding: 24px 28px;
-  margin-top: 24px;
+}
+
+/* When the stats sit in the side panel, a 3-up grid reads better than 4-up. */
+@media (min-width: 900px) {
+  .skill__side .session__stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .session__head {

@@ -141,49 +141,54 @@ export default function SkillTimer() {
   const DASH = "—";
 
   return (
-    <div className="screen container skill">
-      <div className="timer-mode" role="group" aria-label="Timer mode">
-        <button
-          className={`timer-mode__btn${mode === "regular" ? " is-active" : ""}`}
-          onClick={() => chooseMode("regular")}
-          aria-pressed={mode === "regular"}
-        >
-          Regular
-        </button>
-        <button
-          className={`timer-mode__btn${mode === "skill" ? " is-active" : ""}`}
-          onClick={() => chooseMode("skill")}
-          aria-pressed={mode === "skill"}
-        >
-          Skill Timer
-          {!isPro && <span className="timer-mode__pro">Pro</span>}
-        </button>
-      </div>
+    <div className="screen container--wide skill">
+      <div className="skill__layout">
+        <div className="skill__main">
+          <div className="timer-mode" role="group" aria-label="Timer mode">
+            <button
+              className={`timer-mode__btn${mode === "regular" ? " is-active" : ""}`}
+              onClick={() => chooseMode("regular")}
+              aria-pressed={mode === "regular"}
+            >
+              Regular
+            </button>
+            <button
+              className={`timer-mode__btn${mode === "skill" ? " is-active" : ""}`}
+              onClick={() => chooseMode("skill")}
+              aria-pressed={mode === "skill"}
+            >
+              Skill Timer
+              {!isPro && <span className="timer-mode__pro">Pro</span>}
+            </button>
+          </div>
 
-      {scramble ? (
-        mode === "skill" ? (
-          <SolveTimer
-            key={`s-${solves.length}`}
-            scramble={scramble}
-            solveNumber={solves.length + 1}
-            onComplete={handleSkill}
-          />
-        ) : (
-          <CompTimer
-            key={`r-${solves.length}`}
-            scramble={scramble}
-            solveIndex={solves.length}
-            totalSolves={solves.length + 1}
-            practice
-            onComplete={handleRegular}
-          />
-        )
-      ) : (
-        <div className="skill__loading">
-          <div className="spinner" />
-          <p className="muted">Generating a scramble…</p>
+          {scramble ? (
+            mode === "skill" ? (
+              <SolveTimer
+                key={`s-${solves.length}`}
+                scramble={scramble}
+                solveNumber={solves.length + 1}
+                onComplete={handleSkill}
+              />
+            ) : (
+              <CompTimer
+                key={`r-${solves.length}`}
+                scramble={scramble}
+                solveIndex={solves.length}
+                totalSolves={solves.length + 1}
+                practice
+                onComplete={handleRegular}
+              />
+            )
+          ) : (
+            <div className="skill__loading">
+              <div className="spinner" />
+              <p className="muted">Generating a scramble…</p>
+            </div>
+          )}
         </div>
-      )}
+
+        <aside className="skill__side">
 
       {
         <div className="card session">
@@ -296,8 +301,28 @@ export default function SkillTimer() {
               })}
             </div>
           )}
+
+          {solves.length > 0 && (
+            <div className="recent">
+              <span className="eyebrow">Recent solves</span>
+              <div className="recent__list">
+                {solves
+                  .map((s, i) => ({ t: s.totalMs, n: i + 1 }))
+                  .slice(-12)
+                  .reverse()
+                  .map((r) => (
+                    <span key={r.n} className="recent__item">
+                      <span className="tertiary recent__n">{r.n}</span>
+                      <span className="mono">{formatMs(r.t)}</span>
+                    </span>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       }
+        </aside>
+      </div>
     </div>
   );
 }
