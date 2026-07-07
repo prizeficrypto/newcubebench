@@ -136,6 +136,17 @@ export function getHighlight(id: string): Promise<{
   return getJson(`/api/competitions/${encodeURIComponent(id)}/highlight`);
 }
 
+/** A person's official WCA personal records (single/average per event, in cs). */
+export type WcaPerson = {
+  name: string;
+  records: Record<string, { single: number | null; average: number | null }>;
+};
+
+/** Look up a competitor's official WCA records by WCA ID. Public — no auth. */
+export function getWcaPerson(wcaId: string): Promise<WcaPerson> {
+  return getJson(`/api/wca/person/${encodeURIComponent(wcaId)}`);
+}
+
 export async function submitEarlyAccess(email: string): Promise<void> {
   const res = await fetch("/api/early-access", {
     method: "POST",

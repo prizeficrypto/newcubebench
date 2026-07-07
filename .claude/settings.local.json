@@ -104,7 +104,18 @@
       "Bash(curl -s --max-time 15 -L \"https://www.cubebench.app/api/competitions/CubingUSANationals2023/events\")",
       "Bash(git commit --allow-empty -q -m 'Trigger Vercel deploy \\(verify autodeploy on newcubebench\\) *)",
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{try{console.log\\('events:',\\(JSON.parse\\(d\\).events||[]\\).map\\(e=>e.id\\).join\\(', '\\)\\)}catch{console.log\\('raw:',d.slice\\(0,80\\)\\)}}\\)\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:4000/health)",
+      "Bash(break)",
+      "Bash(PORT=4055 node --env-file=server/.env server/src/index.ts)",
+      "Bash(curl -s http://localhost:4055/api/wca/person/2016PARK01)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('name:', d['name']\\); print\\('333:', d['records'].get\\('333'\\)\\)\")",
+      "Bash(curl -s http://localhost:4055/api/wca/person/2016park01)",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code}\\\\n\" http://localhost:4055/api/wca/person/NOPE)",
+      "Bash(curl -s -w \" status=%{http_code}\\\\n\" http://localhost:4055/api/wca/person/1000ZZZZ99)",
+      "Bash(kill %1)",
+      "Bash(pkill -f \"PORT=4055\")",
+      "Bash(curl -s -o /dev/null -w \"4055 now: %{http_code}\\\\n\" http://localhost:4055/health)"
     ]
   }
 }

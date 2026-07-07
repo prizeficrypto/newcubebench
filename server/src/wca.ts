@@ -360,6 +360,51 @@ export async function getCompetitionHighlight(
   return { winnerName, eventCount: events.length };
 }
 
+// ---------- WCA persons (real personal records) ----------
+
+/** WCA ID format: 4 digits, 4 uppercase letters, 2 digits — e.g. 2016PARK01. */
+const WCA_ID_RE = /^\d{4}[A-Z]{4}\d{2}$/;
+
+export function isValidWcaId(wcaId: string): boolean {
+  return WCA_ID_RE.test(wcaId);
+}
+
+type WcaPersonRecord = { single?: { best?: number }; average?: { best?: number } };
+type WcaPersonPayload = {
+  person?: { name?: string; wca_id?: string };
+  personal_records?: Record<string, WcaPersonRecord>;
+};
+
+export type WcaPerson = {
+  name: string;
+  /** per-event official bests in centiseconds; null when the record is absent */
+  records: Record<string, { single: number | null; average: number | null }>;
+};
+
+/**
+ * A person's official WCA personal records. Maps `personal_records` to
+ * `{ [eventId]: { single, average } }` in centiseconds (the `best` field).
+ * A missing person is a 404 -> WcaError (the caller turns it into a clean
+ * client-facing error rather than a 5xx).
+ */
+export async function getWcaPerson(wcaId: string): Promise<WcaPerson> {
+  const { data } = await wcaFetch<WcaPersonPayload>(
+    `/persons/${encodeURIComponent(wcaId)}`,
+  );
+  if (!data || !data.person) {
+    throw new WcaError("WCA ID not found", 404);
+  }
+  const records: WcaPerson["records"] = {};
+  const pr = data.personal_records ?? {};
+  for (const [eventId, rec] of Object.entries(pr)) {
+    records[eventId] = {
+      single: typeof rec.single?.best === "number" ? rec.single.best : null,
+      average: typeof rec.average?.best === "number" ? rec.average.best : null,
+    };
+  }
+  return { name: data.person.name ?? wcaId, records };
+}
+
 export type Competitor = { name: string; averageCs: number };
 
 /** The round that came after this one, and how many competitors reached it. */

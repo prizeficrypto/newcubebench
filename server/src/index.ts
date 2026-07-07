@@ -35,6 +35,8 @@ import {
   getEventRanking,
   getEventRounds,
   getEventRoundScrambles,
+  getWcaPerson,
+  isValidWcaId,
   searchCompetitions,
   WcaError,
 } from "./wca.ts";
@@ -294,6 +296,23 @@ app.get(
       out = { ...ranking, nextRound: { ...ranking.nextRound, solvable } };
     }
     res.json({ ranking: out });
+  }),
+);
+
+// A person's official WCA personal records (single/average per event, in
+// centiseconds). Public metadata — not Pro-gated — so guests can compare their
+// real average too. Bad ID format fails fast as a 400; unknown ID -> 404.
+app.get(
+  "/api/wca/person/:wcaId",
+  wrap(async (req, res) => {
+    const wcaId = String(req.params.wcaId).toUpperCase();
+    if (!isValidWcaId(wcaId)) {
+      throw new WcaError("That doesn't look like a WCA ID.", 400);
+    }
+    const person = await withCache(`wca-person:${wcaId}`, TTL.LONG_MS, () =>
+      getWcaPerson(wcaId),
+    );
+    res.json(person);
   }),
 );
 

@@ -119,6 +119,7 @@ export function Solving({
           scramble={solveScrambles[index]}
           solveIndex={index}
           totalSolves={total}
+          inspection
           onComplete={onAttempt}
         />
       )}

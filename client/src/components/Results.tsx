@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { getRanking, type Competition, type RoundScrambleSet } from "../lib/api.ts";
+import {
+  getRanking,
+  getWcaPerson,
+  type Competition,
+  type RoundScrambleSet,
+} from "../lib/api.ts";
+import { store } from "../lib/store.ts";
 import { useAuth } from "../lib/auth.tsx";
 import {
   attemptCs,
@@ -55,6 +61,120 @@ function Rise({
   );
 }
 
+const WCA_ID_KEY = "cb_wca_id";
+const WCA_ID_RE = /^\d{4}[A-Z]{4}\d{2}$/;
+
+/**
+ * Compare the user's REAL official WCA average against the field they just
+ * simulated: look up their WCA ID, read the official average for this event,
+ * and place it with the same `placeAverage` used for the simulated result.
+ * Public — no auth required, so guests can use it too.
+ */
+function WcaCompare({
+  event,
+  averagesAsc,
+  total,
+}: {
+  event: ClientEvent;
+  averagesAsc: number[];
+  total: number;
+}) {
+  const [wcaId, setWcaId] = useState(() =>
+    (store.get(WCA_ID_KEY) ?? "").toUpperCase(),
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<
+    | { kind: "placed"; name: string; avgCs: number; placement: number }
+    | { kind: "no-average"; name: string }
+    | null
+  >(null);
+
+  async function lookup(rawId: string) {
+    const id = rawId.trim().toUpperCase();
+    if (!WCA_ID_RE.test(id)) {
+      setError("That doesn't look like a WCA ID (e.g. 2016PARK01).");
+      setResult(null);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const person = await getWcaPerson(id);
+      const avg = person.records[event.id]?.average ?? null;
+      if (avg === null) {
+        setResult({ kind: "no-average", name: person.name });
+      } else {
+        const { placement } = placeAverage(avg, averagesAsc, total);
+        setResult({ kind: "placed", name: person.name, avgCs: avg, placement });
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Couldn't reach the WCA — try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Prefill from a prior visit and auto-fetch if a valid ID is already stored.
+  useEffect(() => {
+    const saved = (store.get(WCA_ID_KEY) ?? "").trim().toUpperCase();
+    if (saved && WCA_ID_RE.test(saved)) void lookup(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const id = wcaId.trim().toUpperCase();
+    store.set(WCA_ID_KEY, id);
+    void lookup(id);
+  }
+
+  return (
+    <div className="wca-compare">
+      <span className="eyebrow">Compare your real WCA average</span>
+      <p className="tertiary wca-compare__hint">
+        Enter your WCA ID to see how your real average compares.
+      </p>
+      <form className="wca-compare__form" onSubmit={onSubmit}>
+        <input
+          className="input wca-compare__input mono"
+          value={wcaId}
+          onChange={(e) => setWcaId(e.target.value.toUpperCase())}
+          placeholder="2016PARK01"
+          aria-label="Your WCA ID"
+          autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
+          maxLength={10}
+        />
+        <button className="btn wca-compare__go" type="submit" disabled={loading}>
+          {loading ? "Looking up…" : "Compare"}
+        </button>
+      </form>
+      {error && <p className="wca-compare__error">{error}</p>}
+      {result?.kind === "no-average" && (
+        <p className="muted wca-compare__line">
+          No official {event.display} average on your WCA record yet.
+        </p>
+      )}
+      {result?.kind === "placed" && (
+        <p className="wca-compare__line">
+          Your official WCA {event.formatName} is{" "}
+          <strong className="mono">{formatCentiseconds(result.avgCs)}</strong>,
+          which would place{" "}
+          <strong className="accent mono">{ordinal(result.placement)}</strong> of{" "}
+          <strong className="mono">{total}</strong> in this round.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function Results({
   comp,
   event,
@@ -93,6 +213,8 @@ export function Results({
   const [ranking, setRanking] = useState<{
     placement: number;
     total: number;
+    /** valid competitor averages ascending (cs) — reused to place a real WCA average */
+    averagesAsc: number[];
     fastestCs: number | null;
     /** top three of this round */
     podium: Neighbor[];
@@ -160,6 +282,7 @@ export function Results({
         setRanking({
           placement,
           total,
+          averagesAsc: averages,
           fastestCs: r.fastestAverage,
           podium,
           above,
@@ -253,6 +376,19 @@ export function Results({
           )}
         </div>
       </Rise>
+
+      {/* Compare your real, official WCA average against this same field. */}
+      {ranking && (
+        <Rise index={2} className="results__rank-wrap">
+          <div className="card wca-compare-card">
+            <WcaCompare
+              event={event}
+              averagesAsc={ranking.averagesAsc}
+              total={ranking.total}
+            />
+          </div>
+        </Rise>
+      )}
 
       {/* did you make the cut for the next round? */}
       {ranking?.nextRound && (

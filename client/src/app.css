@@ -726,6 +726,19 @@
   color: var(--text);
 }
 
+/* competition inspection countdown + judge call-out ("8 seconds" / "12 seconds") */
+.inspect.is-over {
+  color: var(--bad);
+}
+
+.inspect__call {
+  display: block;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+}
+
 /* post-solve controls: quiet chips, one primary action */
 
 .post {
@@ -956,6 +969,62 @@
 .results__rank-sub {
   margin: 12px 0 0;
   font-size: 14px;
+}
+
+/* ---------- compare your real WCA average ---------- */
+
+.wca-compare-card {
+  width: 100%;
+  padding: 22px 24px;
+}
+
+.wca-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wca-compare__hint {
+  font-size: 13px;
+  margin: 0 0 4px;
+}
+
+.wca-compare__form {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.wca-compare__input {
+  flex: 1;
+  padding: 11px 14px;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.wca-compare__go {
+  padding: 11px 20px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.wca-compare__go:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.wca-compare__line {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 8px 0 0;
+  color: var(--text);
+}
+
+.wca-compare__error {
+  font-size: 13px;
+  margin: 8px 0 0;
+  color: var(--bad);
 }
 
 .results__solves {
