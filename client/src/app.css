@@ -625,7 +625,7 @@
 /* paused-round resume card above the picker */
 
 .resume {
-  margin-bottom: -60px; /* tucks the picker up under it (screen gap is large) */
+  margin-bottom: 20px; /* sit above the picker with a clear gap, no overlap */
 }
 
 .resume__card {
