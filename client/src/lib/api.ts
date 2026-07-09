@@ -69,8 +69,17 @@ async function getJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function searchCompetitions(query: string): Promise<{ competitions: Competition[] }> {
-  return getJson(`/api/competitions?q=${encodeURIComponent(query)}`);
+export function searchCompetitions(
+  opts: { q?: string; country?: string; start?: string; end?: string; page?: number } = {},
+): Promise<{ competitions: Competition[]; page: number; hasMore: boolean }> {
+  const params = new URLSearchParams();
+  if (opts.q) params.set("q", opts.q);
+  if (opts.country) params.set("country", opts.country);
+  if (opts.start) params.set("start", opts.start);
+  if (opts.end) params.set("end", opts.end);
+  if (opts.page) params.set("page", String(opts.page));
+  const qs = params.toString();
+  return getJson(`/api/competitions${qs ? `?${qs}` : ""}`);
 }
 
 /** One selectable event id + name that a competition held (already filtered to solvable). */
