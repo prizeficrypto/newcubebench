@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/auth.tsx";
 import { getPromo, submitEarlyAccess } from "../lib/api.ts";
+import { useT } from "../lib/i18n.tsx";
 
 /**
  * Two plans. Pro is a real Stripe subscription ($3.49/mo, 3-day trial) when
@@ -11,6 +12,7 @@ import { getPromo, submitEarlyAccess } from "../lib/api.ts";
 type Plan = "monthly" | "annual";
 
 export default function Pricing() {
+  const { t } = useT();
   const { user, billingAvailable, startCheckout, openPortal, refresh } = useAuth();
   const [params, setParams] = useSearchParams();
   const [notice, setNotice] = useState<string | null>(null);
@@ -42,11 +44,11 @@ export default function Pricing() {
   return (
     <div className="screen container pricing">
       <div className="pricing__head">
-        <span className="eyebrow">{showPlans ? "Pricing" : "Your account"}</span>
+        <span className="eyebrow">{showPlans ? t("Pricing") : t("Your account")}</span>
         <h1 className="title">
           {showPlans
-            ? "Practice free. Benchmark any competition with Pro."
-            : "You're on Cube Bench Pro."}
+            ? t("Practice free. Benchmark any competition with Pro.")
+            : t("You're on Cube Bench Pro.")}
         </h1>
       </div>
 
@@ -54,8 +56,8 @@ export default function Pricing() {
 
       {onPromo && user?.promoUntil && (
         <div className="card pricing__plan">
-          <span className="why__label why__label--accent">Your plan</span>
-          <p className="pricing__plan-name">Cube Bench Pro, free month</p>
+          <span className="why__label why__label--accent">{t("Your plan")}</span>
+          <p className="pricing__plan-name">{t("Cube Bench Pro, free month")}</p>
           <p className="muted">
             Your free month ends {formatPromoEnd(user.promoUntil)}. No card needed.
           </p>
@@ -64,9 +66,9 @@ export default function Pricing() {
 
       {proViaStripe && (
         <div className="card pricing__plan">
-          <span className="why__label why__label--accent">Your plan</span>
-          <p className="pricing__plan-name">Cube Bench Pro</p>
-          <p className="muted">Your subscription is active.</p>
+          <span className="why__label why__label--accent">{t("Your plan")}</span>
+          <p className="pricing__plan-name">{t("Cube Bench Pro")}</p>
+          <p className="muted">{t("Your subscription is active.")}</p>
           <ManageSubscription openPortal={openPortal} />
         </div>
       )}
@@ -76,24 +78,24 @@ export default function Pricing() {
       {showPlans && (
       <div className="card pricing__card">
         <div className="pricing__col">
-          <span className="why__label">Free</span>
+          <span className="why__label">{t("Free")}</span>
           <p className="plan__price">
             <span className="plan__amount mono">$0</span>
           </p>
           <ul className="plan__features">
-            <li>Three featured competitions to simulate</li>
-            <li>Unlimited practice on the regular timer</li>
-            <li>Real scrambles, real fields, exact WCA scoring</li>
+            <li>{t("Three featured competitions to simulate")}</li>
+            <li>{t("Unlimited practice on the regular timer")}</li>
+            <li>{t("Real scrambles, real fields, exact WCA scoring")}</li>
           </ul>
           <Link className="btn btn--secondary plan__cta" to="/app">
-            Start solving
+            {t("Start solving")}
           </Link>
         </div>
 
         <div className="pricing__divider" aria-hidden="true" />
 
         <div className="pricing__col">
-          <span className="why__label why__label--accent">Pro</span>
+          <span className="why__label why__label--accent">{t("Pro")}</span>
 
           <div className="plan__toggle" role="group" aria-label="Billing period">
             <button
@@ -101,15 +103,15 @@ export default function Pricing() {
               onClick={() => setPlan("monthly")}
               aria-pressed={plan === "monthly"}
             >
-              Monthly
+              {t("Monthly")}
             </button>
             <button
               className={`plan__toggle-btn${plan === "annual" ? " is-active" : ""}`}
               onClick={() => setPlan("annual")}
               aria-pressed={plan === "annual"}
             >
-              Yearly
-              <span className="plan__save">Save 40%</span>
+              {t("Yearly")}
+              <span className="plan__save">{t("Save 40%")}</span>
             </button>
           </div>
 
@@ -117,21 +119,21 @@ export default function Pricing() {
             {plan === "monthly" ? (
               <>
                 <span className="plan__amount mono">$3.49</span>
-                <span className="plan__per">/month</span>
+                <span className="plan__per">{t("/month")}</span>
               </>
             ) : (
               <>
                 <span className="plan__amount mono">$25</span>
-                <span className="plan__per">/year · $2.08/mo, billed yearly</span>
+                <span className="plan__per">{t("/year · $2.08/mo, billed yearly")}</span>
               </>
             )}
           </p>
           <ul className="plan__features">
-            <li>The entire WCA competition library</li>
-            <li>Everything in Free</li>
+            <li>{t("The entire WCA competition library")}</li>
+            <li>{t("Everything in Free")}</li>
             <li className="plan__feature--soon">
-              Skill Timer, stage-split timing
-              <span className="plan__soon">Coming soon</span>
+              {t("Skill Timer, stage-split timing")}
+              <span className="plan__soon">{t("Coming soon")}</span>
             </li>
           </ul>
           <ProAction
@@ -148,13 +150,13 @@ export default function Pricing() {
       {showPlans && (
         <p className="pricing__note tertiary">
           {billingAvailable
-            ? "Cancel anytime. Your free trial won't be charged until it ends, and yearly saves 40% over paying monthly."
-            : "Pro is launching soon. No payment is taken now."}
+            ? t("Cancel anytime. Your free trial won't be charged until it ends, and yearly saves 40% over paying monthly.")
+            : t("Pro is launching soon. No payment is taken now.")}
         </p>
       )}
 
       <div className="faq pricing__faq">
-        <span className="eyebrow pricing__faq-head">Questions</span>
+        <span className="eyebrow pricing__faq-head">{t("Questions")}</span>
         {[
           {
             q: "Can I cancel whenever I want?",
@@ -171,7 +173,7 @@ export default function Pricing() {
         ].map((item) => (
           <details className="faq__item" key={item.q}>
             <summary className="faq__q">
-              {item.q}
+              {t(item.q)}
               <span className="faq__toggle" aria-hidden="true">
                 +
               </span>
@@ -195,6 +197,7 @@ function formatPromoEnd(ms: number): string {
 
 /** "Manage subscription" — opens the Stripe billing portal (Stripe subs only). */
 function ManageSubscription({ openPortal }: { openPortal: () => Promise<void> }) {
+  const { t } = useT();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   return (
@@ -208,12 +211,12 @@ function ManageSubscription({ openPortal }: { openPortal: () => Promise<void> })
           try {
             await openPortal(); // redirects to Stripe on success
           } catch (err) {
-            setError(err instanceof Error ? err.message : "Something went wrong.");
+            setError(err instanceof Error ? err.message : t("Something went wrong."));
             setBusy(false);
           }
         }}
       >
-        {busy ? "Opening…" : "Manage subscription"}
+        {busy ? t("Opening…") : t("Manage subscription")}
       </button>
       {error && <p className="plan__error">{error}</p>}
     </div>
@@ -227,6 +230,7 @@ function ManageSubscription({ openPortal }: { openPortal: () => Promise<void> })
  * Once spots run out (remaining === 0) we show nothing at all.
  */
 function PromoBanner({ isGuest }: { isGuest: boolean }) {
+  const { t } = useT();
   const [remaining, setRemaining] = useState<number | null>(null);
 
   useEffect(() => {
@@ -247,14 +251,14 @@ function PromoBanner({ isGuest }: { isGuest: boolean }) {
 
   return (
     <div className="card pricing__promo">
-      <span className="why__label why__label--accent">Free for the first 100</span>
+      <span className="why__label why__label--accent">{t("Free for the first 100")}</span>
       <p className="pricing__promo-copy">
-        First 100 sign-ups get Cube Bench Pro free for a month. No card.{" "}
+        {t("First 100 sign-ups get Cube Bench Pro free for a month. No card.")}{" "}
         <strong>{remaining} of 100 spots left.</strong>
       </p>
       {isGuest && (
         <Link className="btn plan__cta pricing__promo-cta" to="/join">
-          Create a free account
+          {t("Create a free account")}
         </Link>
       )}
     </div>
@@ -274,6 +278,7 @@ function ProAction({
   startCheckout: (plan?: Plan) => Promise<void>;
   openPortal: () => Promise<void>;
 }) {
+  const { t } = useT();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -283,7 +288,7 @@ function ProAction({
     try {
       await fn(); // redirects to Stripe on success
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(err instanceof Error ? err.message : t("Something went wrong."));
       setBusy(false);
     }
   }
@@ -291,13 +296,13 @@ function ProAction({
   if (isPro) {
     return (
       <div className="plan__cta-wrap">
-        <p className="plan__done">You're on Pro. Thanks for the support.</p>
+        <p className="plan__done">{t("You're on Pro. Thanks for the support.")}</p>
         <button
           className="btn btn--secondary plan__cta"
           disabled={busy}
           onClick={() => go(openPortal)}
         >
-          {busy ? "Opening…" : "Manage subscription"}
+          {busy ? t("Opening…") : t("Manage subscription")}
         </button>
         {error && <p className="plan__error">{error}</p>}
       </div>
@@ -312,10 +317,10 @@ function ProAction({
           disabled={busy}
           onClick={() => go(() => startCheckout(plan))}
         >
-          {busy ? "Starting…" : "Upgrade to Pro"}
+          {busy ? t("Starting…") : t("Upgrade to Pro")}
         </button>
         <p className="plan__honest tertiary">
-          Secure checkout by Stripe · cancel anytime
+          {t("Secure checkout by Stripe · cancel anytime")}
         </p>
         {error && <p className="plan__error">{error}</p>}
       </div>
@@ -327,6 +332,7 @@ function ProAction({
 }
 
 function EarlyAccess() {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done">("idle");
@@ -341,14 +347,14 @@ function EarlyAccess() {
       setState("done");
     } catch (err) {
       setState("idle");
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(err instanceof Error ? err.message : t("Something went wrong."));
     }
   }
 
   if (state === "done") {
     return (
       <p className="plan__done">
-        You're on the list. We'll email you when Pro launches.
+        {t("You're on the list. We'll email you when Pro launches.")}
       </p>
     );
   }
@@ -357,9 +363,9 @@ function EarlyAccess() {
     return (
       <div className="plan__cta-wrap">
         <button className="btn plan__cta" onClick={() => setOpen(true)}>
-          Get early access
+          {t("Get early access")}
         </button>
-        <p className="plan__honest tertiary">Launching soon · no payment now</p>
+        <p className="plan__honest tertiary">{t("Launching soon · no payment now")}</p>
       </div>
     );
   }
@@ -376,11 +382,11 @@ function EarlyAccess() {
         onChange={(e) => setEmail(e.target.value)}
       />
       <button className="btn plan__cta" disabled={state === "sending"}>
-        {state === "sending" ? "Adding…" : "Notify me"}
+        {state === "sending" ? t("Adding…") : t("Notify me")}
       </button>
       {error && <p className="plan__error">{error}</p>}
       <p className="plan__honest tertiary">
-        Pro is launching soon. No payment is taken now.
+        {t("Pro is launching soon. No payment is taken now.")}
       </p>
     </form>
   );

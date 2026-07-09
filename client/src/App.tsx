@@ -8,6 +8,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/auth.tsx";
+import { LanguageProvider } from "./lib/i18n.tsx";
 import { NavBar } from "./components/NavBar.tsx";
 import { AppShell } from "./components/AppShell.tsx";
 import { Onboarding } from "./components/Onboarding.tsx";
@@ -27,6 +28,7 @@ import Pricing from "./pages/Pricing.tsx";
 export default function App() {
   return (
     <AuthProvider>
+      <LanguageProvider>
       <BrowserRouter>
         <Routes>
           <Route
@@ -59,6 +61,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      </LanguageProvider>
     </AuthProvider>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Reveal } from "../components/Reveal.tsx";
 import { Mark } from "../components/Mark.tsx";
+import { useT } from "../lib/i18n.tsx";
 
 /**
  * Marketing landing page, desktop-first. One motion vocabulary (rise +
@@ -75,6 +76,7 @@ const FAQ = [
 ];
 
 export default function Home() {
+  const { t } = useT();
   const stageMainRef = useRef<HTMLDivElement>(null);
 
   // The showcase settles from a slight perspective tilt to flat over the
@@ -118,37 +120,38 @@ export default function Home() {
       {/* ---------- hero: a scripted sequence, not a fade-in ---------- */}
       <section className="hero container">
         <span className="eyebrow hero__fade" style={{ animationDelay: "0.05s" }}>
-          Competition benchmark for speedcubers
+          {t("Competition benchmark for speedcubers")}
         </span>
-        <h1 className="display hero__headline" aria-label="Find out where you'd actually place.">
+        <h1 className="display hero__headline" aria-label={t("Find out where you'd actually place.")}>
           <span className="hero__line">
-            <MaskedWords text="Find out where" startDelay={0.12} />
+            <MaskedWords text={t("Find out where")} startDelay={0.12} />
           </span>
           <span className="hero__line">
             <MaskedWords
-              text="you'd actually place."
+              text={t("you'd actually place.")}
               startDelay={0.39}
               italicIndex={1}
             />
           </span>
         </h1>
         <p className="lead hero__lead hero__fade" style={{ animationDelay: "0.62s" }}>
-          Solve the real scrambles from real WCA competitions and see where
-          your average would have landed against the people who were there.
+          {t(
+            "Solve the real scrambles from real WCA competitions and see where your average would have landed against the people who were there.",
+          )}
         </p>
         <div className="hero__ctas hero__fade" style={{ animationDelay: "0.78s" }}>
           <Link className="btn" to="/app">
-            Launch App
+            {t("Launch App")}
           </Link>
           <a className="btn btn--ghost" href="#how">
-            See how it works <span className="arrow">→</span>
+            {t("See how it works")} <span className="arrow">→</span>
           </a>
         </div>
         <p
           className="hero__meta tertiary hero__fade"
           style={{ animationDelay: "0.92s" }}
         >
-          Free to start · Real WCA data · Runs in your browser
+          {t("Free to start · Real WCA data · Runs in your browser")}
         </p>
       </section>
 
@@ -158,9 +161,9 @@ export default function Home() {
         aria-label="The app's result screen"
       >
         <div className="card stage__main" ref={stageMainRef}>
-          <span className="eyebrow">Your result</span>
+          <span className="eyebrow">{t("Your result")}</span>
           <div className="stage__avg mono">12.43</div>
-          <p className="muted stage__avg-label">WCA average of 5</p>
+          <p className="muted stage__avg-label">{t("WCA average of 5")}</p>
           <p className="results__rank-line">
             Would have placed <strong className="accent mono">428th</strong> of{" "}
             <strong className="mono">1014</strong> at CubingUSA Nationals 2023
@@ -257,8 +260,8 @@ export default function Home() {
       {/* ---------- how it works: real UI fragments ---------- */}
       <section className="how container--wide" id="how">
         <Reveal>
-          <span className="eyebrow">How it works</span>
-          <h2 className="how__title h-ink">Three steps to a real answer.</h2>
+          <span className="eyebrow">{t("How it works")}</span>
+          <h2 className="how__title h-ink">{t("Three steps to a real answer.")}</h2>
         </Reveal>
         <div className="how__grid">
           <Reveal delay={0}>
@@ -279,7 +282,7 @@ export default function Home() {
                   <span className="comp-row__chev">›</span>
                 </div>
               </div>
-              <h3 className="how__step-title">Pick a real competition</h3>
+              <h3 className="how__step-title">{t("Pick a real competition")}</h3>
               <p className="muted how__step-body">
                 Any competition in the library, first round through the final.
                 Three featured championships are free.
@@ -298,7 +301,7 @@ export default function Home() {
                 </span>
                 <span className="how__digits mono">10.42</span>
               </div>
-              <h3 className="how__step-title">Solve the same five scrambles</h3>
+              <h3 className="how__step-title">{t("Solve the same five scrambles")}</h3>
               <p className="muted how__step-body">
                 Hold-to-start timer, 15 seconds of WCA inspection, and a +2 if
                 you start late. Just like the real round.
@@ -320,7 +323,7 @@ export default function Home() {
                   against the real field
                 </span>
               </div>
-              <h3 className="how__step-title">See where you'd have placed</h3>
+              <h3 className="how__step-title">{t("See where you'd have placed")}</h3>
               <p className="muted how__step-body">
                 Your Ao5 sits in the official standings. The winner that day
                 averaged 5.88.
@@ -344,8 +347,8 @@ export default function Home() {
         </Reveal>
         <Reveal>
           <div className="timerband__copy">
-            <span className="eyebrow">The timer</span>
-            <h2 className="h-ink">Conventions cubers already know.</h2>
+            <span className="eyebrow">{t("The timer")}</span>
+            <h2 className="h-ink">{t("Conventions cubers already know.")}</h2>
             <p className="muted timerband__body">
               Hold space until it arms, release to start, and any key stops.
               Fifteen seconds of WCA inspection runs before every solve, and a
@@ -357,7 +360,7 @@ export default function Home() {
               it for later.
             </p>
             <Link className="btn btn--ghost timerband__cta" to="/app">
-              Try a solve <span className="arrow">→</span>
+              {t("Try a solve")} <span className="arrow">→</span>
             </Link>
           </div>
         </Reveal>
@@ -390,8 +393,8 @@ export default function Home() {
       {/* ---------- one real round, by the numbers ---------- */}
       <section className="numbers container--wide">
         <Reveal>
-          <span className="eyebrow">By the numbers</span>
-          <h2 className="h-ink numbers__title">One real round.</h2>
+          <span className="eyebrow">{t("By the numbers")}</span>
+          <h2 className="h-ink numbers__title">{t("One real round.")}</h2>
         </Reveal>
         <div className="numbers__grid">
           {[
@@ -418,22 +421,22 @@ export default function Home() {
       <section className="skillband container--wide">
         <Reveal>
           <div className="skillband__copy">
-            <span className="eyebrow">Also inside</span>
-            <h2 className="h-ink">Skill Timer</h2>
+            <span className="eyebrow">{t("Also inside")}</span>
+            <h2 className="h-ink">{t("Skill Timer")}</h2>
             <p className="muted skillband__body">
               Practice with stage splits: one tap at the end of Cross, F2L,
               OLL, and PLL. Session by session, see exactly which stage is
               eating your time, and whether the work is paying off.
             </p>
             <Link className="btn btn--secondary" to="/app/skill-timer">
-              Open Skill Timer
+              {t("Open Skill Timer")}
             </Link>
           </div>
         </Reveal>
         <Reveal delay={120}>
           <div className="card skillband__demo">
             <div className="session__stat">
-              <span className="session__stat-label">Focus on</span>
+              <span className="session__stat-label">{t("Focus on")}</span>
               <span className="session__stat-value">
                 F2L <span className="muted mono session__pct">48%</span>
               </span>
@@ -449,8 +452,8 @@ export default function Home() {
       {/* ---------- FAQ ---------- */}
       <section className="faq container" id="faq">
         <Reveal>
-          <span className="eyebrow">FAQ</span>
-          <h2 className="h-ink faq__title">Fair questions.</h2>
+          <span className="eyebrow">{t("FAQ")}</span>
+          <h2 className="h-ink faq__title">{t("Fair questions.")}</h2>
         </Reveal>
         <div className="faq__list">
           {FAQ.map((item, i) => (
@@ -473,8 +476,8 @@ export default function Home() {
       <section className="claim">
         <Reveal>
           <div className="claim__inner">
-            <span className="eyebrow claim__eyebrow">Why we built this</span>
-            <h2 className="claim__title">Make it measurable.</h2>
+            <span className="eyebrow claim__eyebrow">{t("Why we built this")}</span>
+            <h2 className="claim__title">{t("Make it measurable.")}</h2>
             <p className="claim__body">
               Cube timer websites haven't changed in years, and none of them
               answer the question everyone practicing at home has: am I ready
@@ -483,7 +486,7 @@ export default function Home() {
               your first competition because the numbers say you're ready.
             </p>
             <Link className="btn claim__cta" to="/app">
-              Launch App
+              {t("Launch App")}
             </Link>
           </div>
         </Reveal>
@@ -501,27 +504,27 @@ export default function Home() {
             </span>
           </div>
           <div className="footer__col">
-            <span className="footer__head">Product</span>
+            <span className="footer__head">{t("Product")}</span>
             <Link className="footer__link" to="/app">
-              Launch App
+              {t("Launch App")}
             </Link>
             <Link className="footer__link" to="/app/skill-timer">
-              Skill Timer
+              {t("Skill Timer")}
             </Link>
             <Link className="footer__link" to="/app/pricing">
-              Pricing
+              {t("Pricing")}
             </Link>
           </div>
           <div className="footer__col">
-            <span className="footer__head">Learn</span>
+            <span className="footer__head">{t("Learn")}</span>
             <a className="footer__link" href="#how">
-              How it works
+              {t("How it works")}
             </a>
             <a className="footer__link" href="#why">
-              Why Cube Bench
+              {t("Why Cube Bench")}
             </a>
             <a className="footer__link" href="#faq">
-              FAQ
+              {t("FAQ")}
             </a>
           </div>
         </div>

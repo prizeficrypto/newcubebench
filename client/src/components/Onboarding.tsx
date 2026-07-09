@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "../lib/auth.tsx";
 import { renderGoogleButton } from "../lib/google.ts";
 import { Mark } from "./Mark.tsx";
+import { useT } from "../lib/i18n.tsx";
 
 /**
  * The gate in front of the app: account → quick profile. A bare column on the
@@ -40,6 +41,7 @@ function Item({
 
 export function Onboarding() {
   const { user } = useAuth();
+  const { t } = useT();
   const [step, setStep] = useState<"account" | "profile">(
     user ? "profile" : "account",
   );
@@ -55,13 +57,14 @@ export function Onboarding() {
         {step === "account" ? <Account /> : <Profile />}
       </div>
       <p className="gate__foot tertiary">
-        Free to start. Your results stay yours.
+        {t("Free to start. Your results stay yours.")}
       </p>
     </div>
   );
 }
 
 function Account() {
+  const { t } = useT();
   const { googleAvailable, signInGoogle, signUpEmail, signInEmail } = useAuth();
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
   const canGoogle = googleAvailable && clientId.length > 0;
@@ -112,7 +115,7 @@ function Account() {
       else await signInEmail(email, password);
       // success advances the step via the user effect in Onboarding
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(err instanceof Error ? err.message : t("Something went wrong."));
     } finally {
       setBusy(false);
     }
@@ -124,19 +127,19 @@ function Account() {
     <>
       <Item index={++i}>
         <span className="gate__count mono">
-          {signup ? "Step 1 of 2" : "Sign in"}
+          {signup ? t("Step 1 of 2") : t("Sign in")}
         </span>
       </Item>
       <Item index={++i}>
         <h1 className="title gate__title">
-          {signup ? "Create your account" : "Welcome back"}
+          {signup ? t("Create your account") : t("Welcome back")}
         </h1>
       </Item>
       <Item index={++i}>
         <p className="muted gate__sub">
           {signup
-            ? "Two quick steps and you're solving."
-            : "Sign in to pick up where you left off."}
+            ? t("Two quick steps and you're solving.")
+            : t("Sign in to pick up where you left off.")}
         </p>
       </Item>
 
@@ -148,7 +151,7 @@ function Account() {
           </Item>
           <Item index={++i}>
             <div className="gate__divider">
-              <span>or</span>
+              <span>{t("or")}</span>
             </div>
           </Item>
         </>
@@ -159,7 +162,7 @@ function Account() {
           {signup && (
             <input
               className="input"
-              placeholder="Your name"
+              placeholder={t("Your name")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={80}
@@ -181,7 +184,7 @@ function Account() {
             className="input"
             type="password"
             autoComplete={signup ? "new-password" : "current-password"}
-            placeholder={signup ? "Create a password (8+ characters)" : "Password"}
+            placeholder={signup ? t("Create a password (8+ characters)") : t("Password")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             minLength={8}
@@ -190,11 +193,11 @@ function Account() {
           <button className="btn" disabled={busy}>
             {busy
               ? signup
-                ? "Creating…"
-                : "Signing in…"
+                ? t("Creating…")
+                : t("Signing in…")
               : signup
-                ? "Create account"
-                : "Sign in"}
+                ? t("Create account")
+                : t("Sign in")}
           </button>
           {error && <p className="gate__error">{error}</p>}
         </form>
@@ -211,8 +214,8 @@ function Account() {
           }}
         >
           {signup
-            ? "Already have an account? Sign in"
-            : "New here? Create an account"}
+            ? t("Already have an account? Sign in")
+            : t("New here? Create an account")}
         </button>
       </Item>
     </>
@@ -220,6 +223,7 @@ function Account() {
 }
 
 function Profile() {
+  const { t } = useT();
   const { user, saveProfile } = useAuth();
   const [displayName, setDisplayName] = useState(
     user?.profile.displayName ?? user?.name ?? "",
@@ -244,14 +248,14 @@ function Profile() {
   return (
     <>
       <Item index={++i}>
-        <span className="gate__count mono">Step 2 of 2</span>
+        <span className="gate__count mono">{t("Step 2 of 2")}</span>
       </Item>
       <Item index={++i}>
-        <h1 className="title gate__title">How fast are you?</h1>
+        <h1 className="title gate__title">{t("How fast are you?")}</h1>
       </Item>
       <Item index={++i}>
         <p className="muted gate__sub">
-          A rough guess is fine. It just gives your results some context.
+          {t("A rough guess is fine. It just gives your results some context.")}
         </p>
       </Item>
 
@@ -265,7 +269,7 @@ function Profile() {
         >
           <input
             className="input"
-            placeholder="Display name"
+            placeholder={t("Display name")}
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             maxLength={80}
@@ -282,14 +286,14 @@ function Profile() {
                 className={`lvl${level === l.value ? " is-selected" : ""}`}
                 onClick={() => setLevel(l.value)}
               >
-                <span className="lvl__label">{l.label}</span>
+                <span className="lvl__label">{t(l.label)}</span>
                 <span className="lvl__range mono">{l.range}</span>
               </button>
             ))}
           </div>
 
           <button className="btn" disabled={busy || !level}>
-            {busy ? "Saving…" : "Start solving"}
+            {busy ? t("Saving…") : t("Start solving")}
           </button>
           {error && <p className="gate__error">{error}</p>}
         </form>
@@ -301,7 +305,7 @@ function Profile() {
           disabled={busy}
           onClick={() => save("unsure")}
         >
-          Not sure yet? Skip for now
+          {t("Not sure yet? Skip for now")}
         </button>
       </Item>
     </>

@@ -1,6 +1,8 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../lib/auth.tsx";
 import { Mark } from "./Mark.tsx";
+import { useT } from "../lib/i18n.tsx";
+import { LanguageSwitcher } from "./LanguageSwitcher.tsx";
 
 /**
  * Everything behind "Launch App". Open to guests — they can run the featured
@@ -10,6 +12,7 @@ import { Mark } from "./Mark.tsx";
  */
 export function AppShell() {
   const { user, loading, signOut } = useAuth();
+  const { t } = useT();
 
   if (loading) {
     return (
@@ -41,20 +44,21 @@ export function AppShell() {
               end
               className={({ isActive }) => `nav__link${isActive ? " is-active" : ""}`}
             >
-              Competitions
+              {t("Competitions")}
             </NavLink>
             <NavLink
               to="/app/skill-timer"
               className={({ isActive }) => `nav__link${isActive ? " is-active" : ""}`}
             >
-              Timer
+              {t("Timer")}
             </NavLink>
             <NavLink
               to="/app/pricing"
               className={({ isActive }) => `nav__link${isActive ? " is-active" : ""}`}
             >
-              Pricing
+              {t("Pricing")}
             </NavLink>
+            <LanguageSwitcher />
             {user ? (
               <>
                 <span className="nav__user-chip" title={user.email}>
@@ -68,12 +72,12 @@ export function AppShell() {
                   className="nav__link nav__signout"
                   onClick={() => signOut()}
                 >
-                  Sign out
+                  {t("Sign out")}
                 </button>
               </>
             ) : (
               <Link to="/join" className="btn nav__join">
-                Create account
+                {t("Create account")}
               </Link>
             )}
           </div>

@@ -17,6 +17,7 @@ type Highlight = {
 };
 import { isTouchDevice } from "../lib/pointer.ts";
 import { useAuth } from "../lib/auth.tsx";
+import { useT } from "../lib/i18n.tsx";
 
 /**
  * Competition picker with visual free/Pro gating (no accounts in this
@@ -35,6 +36,7 @@ export function CompetitionPicker({
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useT();
   const isPro = Boolean(user?.pro);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Competition[]>([]);
@@ -211,11 +213,10 @@ export function CompetitionPicker({
   return (
     <div className="screen container picker">
       <div className="picker__head">
-        <span className="eyebrow">Step 1</span>
-        <h2 className="title">Pick a competition</h2>
+        <span className="eyebrow">{t("Step 1")}</span>
+        <h2 className="title">{t("Pick a competition")}</h2>
         <p className="muted">
-          Search by name, city, or year, then pick an event and any round the
-          competition ran.
+          {t("Search by name, city, or year, then pick an event and any round the competition ran.")}
         </p>
       </div>
 
@@ -223,21 +224,20 @@ export function CompetitionPicker({
         <input
           ref={inputRef}
           className="input"
-          placeholder="Search all competitions…"
+          placeholder={t("Search all competitions…")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           spellCheck={false}
         />
       ) : (
         <p className="picker__plan-note tertiary">
-          Sign in to search the full WCA library.
+          {t("Sign in to search the full WCA library.")}
         </p>
       )}
 
       {user && showingFeatured && (
         <p className="picker__plan-note tertiary">
-          Featured competitions are free. The full library of past WCA
-          competitions comes with Pro.
+          {t("Featured competitions are free. The full library of past WCA competitions comes with Pro.")}
         </p>
       )}
 
@@ -261,14 +261,14 @@ export function CompetitionPicker({
               className="btn btn--secondary picker__retry"
               onClick={() => setRetryNonce((n) => n + 1)}
             >
-              Try again
+              {t("Try again")}
             </button>
           </div>
         )}
 
         {!loading && !error && rows.length === 0 && (
           <div className="state-center muted picker__empty">
-            <p>No competitions found.</p>
+            <p>{t("No competitions found.")}</p>
             <p className="tertiary">
               Try a name, city, or year, like “Nationals 2023”.
             </p>
