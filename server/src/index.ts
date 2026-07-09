@@ -111,7 +111,7 @@ app.get("/health", (_req, res) => {
 app.get("/ready", async (_req, res) => {
   try {
     await withCache("ready:probe", 30_000, () =>
-      searchCompetitions("").then(() => true),
+      searchCompetitions({}).then(() => true),
     );
     res.json({ status: "ready" });
   } catch (err) {
@@ -125,16 +125,25 @@ app.get("/ready", async (_req, res) => {
 
 // ---- Data endpoints ----
 
-// Searchable competition list.
+// Searchable + browsable competition list: full-text, country + date filters,
+// and pagination so the client can scroll to load more.
 app.get(
   "/api/competitions",
   searchLimiter,
   wrap(async (req, res) => {
-    const q = typeof req.query.q === "string" ? req.query.q : "";
-    const results = await withCache(`search:${q.toLowerCase()}`, TTL.SHORT_MS, () =>
-      searchCompetitions(q),
+    const str = (v: unknown) => (typeof v === "string" ? v : "");
+    const q = str(req.query.q);
+    const country = str(req.query.country); // ISO-2, e.g. "US"
+    const start = str(req.query.start); // YYYY-MM-DD
+    const end = str(req.query.end);
+    const page = Math.max(1, Math.min(50, Number(str(req.query.page)) || 1));
+    const perPage = 24;
+    const key = `search:${q.toLowerCase()}|${country}|${start}|${end}|p${page}`;
+    const results = await withCache(key, TTL.SHORT_MS, () =>
+      searchCompetitions({ q, country, start, end, page, perPage }),
     );
-    res.json({ competitions: results });
+    // A full page back suggests there may be another.
+    res.json({ competitions: results, page, hasMore: results.length === perPage });
   }),
 );
 

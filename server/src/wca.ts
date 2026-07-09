@@ -137,13 +137,37 @@ export async function getCompetition(id: string): Promise<WcaCompetition> {
   return data;
 }
 
-export async function searchCompetitions(query: string): Promise<WcaCompetition[]> {
-  const q = query.trim();
-  // The WCA competitions index supports full-text `q`, sorted most-recent first.
-  const path = q
-    ? `/competitions?q=${encodeURIComponent(q)}&sort=-start_date&per_page=25`
-    : `/competitions?sort=-start_date&per_page=25`;
-  const { data } = await wcaFetch<WcaCompetition[]>(path);
+export type CompSearch = {
+  q?: string;
+  /** ISO-2 country code, e.g. "US" */
+  country?: string;
+  /** competitions starting on/after this YYYY-MM-DD */
+  start?: string;
+  /** competitions ending on/before this YYYY-MM-DD */
+  end?: string;
+  page?: number;
+  perPage?: number;
+};
+
+/**
+ * Browse/search the WCA competition index. Supports full-text `q`, country and
+ * date filters, and pagination (so the client can scroll to load more), all
+ * most-recent first.
+ */
+export async function searchCompetitions(
+  opts: CompSearch = {},
+): Promise<WcaCompetition[]> {
+  const params = new URLSearchParams();
+  if (opts.q?.trim()) params.set("q", opts.q.trim());
+  if (opts.country) params.set("country_iso2", opts.country);
+  if (opts.start) params.set("start", opts.start);
+  if (opts.end) params.set("end", opts.end);
+  params.set("sort", "-start_date");
+  params.set("per_page", String(opts.perPage ?? 25));
+  params.set("page", String(Math.max(1, opts.page ?? 1)));
+  const { data } = await wcaFetch<WcaCompetition[]>(
+    `/competitions?${params.toString()}`,
+  );
   return (data ?? []).map((c) => ({
     id: c.id,
     name: c.name,
