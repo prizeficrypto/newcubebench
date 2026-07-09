@@ -14,9 +14,12 @@ create table if not exists users (
   profile            jsonb not null default '{}'::jsonb,
   stripe_customer_id text,
   sub_status         text,                   -- trialing | active | past_due | canceled | incomplete | none
-  current_period_end bigint                  -- epoch ms the paid period ends
+  current_period_end bigint,                 -- epoch ms the paid period ends
+  promo_until        bigint                  -- epoch ms the free "first 100" month ends
 );
 create index if not exists users_stripe_customer_idx on users (stripe_customer_id);
+-- If the users table predates the promo, add the column (safe to re-run):
+alter table users add column if not exists promo_until bigint;
 
 -- Login sessions. Replaces the old in-memory session map, so logins survive
 -- restarts and deploys.

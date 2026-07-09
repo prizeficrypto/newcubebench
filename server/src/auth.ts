@@ -50,11 +50,20 @@ export type User = {
   subStatus?: SubStatus;
   /** epoch ms the current paid period ends; access holds until then */
   currentPeriodEnd?: number;
+  /** epoch ms the free "first 100" promo month ends (no card, auto-granted at
+   *  signup while spots remain). Pro until then. */
+  promoUntil?: number;
 };
 
-/** A user is Pro while trialing/active, or until a canceled period expires. */
+/** How many of the first-100 free-month spots exist. */
+export const PROMO_CAP = 100;
+const PROMO_MS = 30 * 24 * 60 * 60 * 1000; // one free month
+
+/** A user is Pro via the free promo month, an active/trialing sub, or a
+ *  canceled-but-still-paid period. */
 export function isPro(user: User | undefined | null): boolean {
   if (!user) return false;
+  if (user.promoUntil && user.promoUntil > Date.now()) return true; // free month
   if (user.subStatus === "trialing" || user.subStatus === "active") return true;
   if (
     user.subStatus === "canceled" &&
@@ -119,6 +128,7 @@ type UserRow = {
   stripe_customer_id: string | null;
   sub_status: SubStatus | null;
   current_period_end: string | number | null;
+  promo_until: string | number | null;
 };
 
 function rowToUser(row: UserRow): User {
@@ -139,7 +149,38 @@ function rowToUser(row: UserRow): User {
     // int8 comes back as a string from postgres.js; epoch ms fits in a Number.
     currentPeriodEnd:
       row.current_period_end != null ? Number(row.current_period_end) : undefined,
+    promoUntil: row.promo_until != null ? Number(row.promo_until) : undefined,
   };
+}
+
+/** Free-month promo status: how many spots are claimed / left. */
+export async function promoStatus(): Promise<{
+  cap: number;
+  claimed: number;
+  remaining: number;
+}> {
+  const rows = await sql<{ n: number }[]>`
+    select count(*)::int as n from users where promo_until is not null
+  `;
+  const claimed = rows[0]?.n ?? 0;
+  return { cap: PROMO_CAP, claimed, remaining: Math.max(0, PROMO_CAP - claimed) };
+}
+
+/**
+ * Grant the free month to a brand-new user, but only while spots remain. The
+ * cap is enforced inside a single conditional UPDATE so concurrent signups
+ * can't blow far past 100. Returns the promo expiry if granted.
+ */
+async function grantPromoIfAvailable(userId: string): Promise<number | null> {
+  const until = Date.now() + PROMO_MS;
+  const rows = await sql<{ promo_until: string | number }[]>`
+    update users set promo_until = ${until}
+    where id = ${userId}
+      and promo_until is null
+      and (select count(*) from users where promo_until is not null) < ${PROMO_CAP}
+    returning promo_until
+  `;
+  return rows[0] ? Number(rows[0].promo_until) : null;
 }
 
 async function findByKey(key: string): Promise<User | undefined> {
@@ -156,6 +197,14 @@ async function insertUser(user: User): Promise<User> {
       ${user.passwordHash ?? null}, ${user.createdAt}, ${sql.json(user.profile)}
     )
   `;
+  // First 100 accounts get a free Pro month, no card. Best-effort: a failed
+  // grant must never block signup.
+  try {
+    const until = await grantPromoIfAvailable(user.id);
+    if (until) user.promoUntil = until;
+  } catch {
+    /* promo unavailable — user still gets a normal free account */
+  }
   return user;
 }
 

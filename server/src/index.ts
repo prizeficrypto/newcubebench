@@ -12,6 +12,7 @@ import {
   destroySession,
   googleAuthAvailable,
   isPro,
+  promoStatus,
   publicUser,
   signInWithEmail,
   signInWithGoogle,
@@ -339,6 +340,14 @@ app.get("/api/auth/config", (_req, res) => {
     billingAvailable: stripeConfigured(),
   });
 });
+
+// Free "first 100 sign-ups" promo counter (no cache — must be live).
+app.get(
+  "/api/promo",
+  wrap(async (_req, res) => {
+    res.json(await promoStatus());
+  }),
+);
 
 app.post(
   "/api/auth/google",
