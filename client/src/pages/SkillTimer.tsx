@@ -4,6 +4,7 @@ import { SolveTimer } from "../components/SolveTimer.tsx";
 import { PRACTICE_EVENT_IDS, randomScramble } from "../lib/scrambles.ts";
 import { eventOrDefault } from "../lib/events.ts";
 import { store } from "../lib/store.ts";
+import { useT } from "../lib/i18n.tsx";
 import {
   formatMs,
   stageBreakdown,
@@ -30,6 +31,7 @@ type Mode = "regular" | "skill";
 type PracticeSolve = { totalMs: number; stages?: Solve["stages"] };
 
 export default function SkillTimer() {
+  const { t } = useT();
   const [mode, setMode] = useState<Mode>("regular");
   const [event, setEvent] = useState<string>("333");
   const [scramble, setScramble] = useState<string>(() => randomScramble("333"));
@@ -118,10 +120,14 @@ export default function SkillTimer() {
   }
 
   function resetSession() {
+    const countLabel = `${solves.length} ${t("Solves")}`;
     if (
       solves.length > 0 &&
       !window.confirm(
-        `Reset this session? Your ${solves.length} solve${solves.length === 1 ? "" : "s"} will be cleared.`,
+        t("Reset this session? Your {count} will be cleared.").replace(
+          "{count}",
+          countLabel,
+        ),
       )
     ) {
       return;
@@ -139,7 +145,7 @@ export default function SkillTimer() {
         <div className="skill__main">
           <div className="timer-puzzle">
             <label className="tertiary timer-puzzle__label" htmlFor="puzzle">
-              Puzzle
+              {t("Puzzle")}
             </label>
             <select
               id="puzzle"
@@ -161,19 +167,19 @@ export default function SkillTimer() {
               onClick={() => chooseMode("regular")}
               aria-pressed={mode === "regular"}
             >
-              Regular
+              {t("Regular")}
             </button>
             <button
               className="timer-mode__btn"
               disabled
               aria-pressed={false}
             >
-              Skill Timer
-              <span className="timer-mode__soon">Soon</span>
+              {t("Skill Timer")}
+              <span className="timer-mode__soon">{t("Soon")}</span>
             </button>
           </div>
           <p className="timer-mode__caption tertiary">
-            Skill Timer (stage splits) is a work in progress.
+            {t("Skill Timer (stage splits) is a work in progress.")}
           </p>
 
           {scramble ? (
@@ -197,7 +203,7 @@ export default function SkillTimer() {
           ) : (
             <div className="skill__loading">
               <div className="spinner" />
-              <p className="muted">Generating a scramble…</p>
+              <p className="muted">{t("Generating a scramble…")}</p>
             </div>
           )}
         </div>
@@ -207,35 +213,35 @@ export default function SkillTimer() {
       {
         <div className="card session">
           <div className="session__head">
-            <h3 className="session__title">This session</h3>
+            <h3 className="session__title">{t("This session")}</h3>
             <button
               className="btn--ghost btn session__reset"
               onClick={resetSession}
               disabled={solves.length === 0}
             >
-              Reset
+              {t("Reset")}
             </button>
           </div>
 
           <div className="session__stats">
             <div className="session__stat">
-              <span className="session__stat-label">Solves</span>
+              <span className="session__stat-label">{t("Solves")}</span>
               <span className="session__stat-value mono">{solves.length}</span>
             </div>
             <div className="session__stat">
-              <span className="session__stat-label">Session best</span>
+              <span className="session__stat-label">{t("Session best")}</span>
               <span className="session__stat-value mono">
                 {summary.bestMs !== null ? formatMs(summary.bestMs) : DASH}
               </span>
             </div>
             <div className="session__stat">
-              <span className="session__stat-label">Personal best</span>
+              <span className="session__stat-label">{t("Personal best")}</span>
               <span className="session__stat-value mono">
                 {pbMs !== null ? formatMs(pbMs) : DASH}
               </span>
             </div>
             <div className="session__stat">
-              <span className="session__stat-label">Average</span>
+              <span className="session__stat-label">{t("Average")}</span>
               <span className="session__stat-value mono">
                 {summary.meanMs !== null ? formatMs(summary.meanMs) : DASH}
               </span>
@@ -253,32 +259,32 @@ export default function SkillTimer() {
               </span>
             </div>
             <div className="session__stat">
-              <span className="session__stat-label">Worst</span>
+              <span className="session__stat-label">{t("Worst")}</span>
               <span className="session__stat-value mono">
                 {summary.worstMs !== null ? formatMs(summary.worstMs) : DASH}
               </span>
             </div>
             <div className="session__stat">
-              <span className="session__stat-label">Consistency</span>
+              <span className="session__stat-label">{t("Consistency")}</span>
               <span className="session__stat-value mono">
                 {summary.stdevMs !== null ? `±${formatMs(summary.stdevMs)}` : DASH}
               </span>
             </div>
             <div className="session__stat">
-              <span className="session__stat-label">Best Ao5</span>
+              <span className="session__stat-label">{t("Best Ao5")}</span>
               <span className="session__stat-value mono">
                 {pbAo5Ms !== null ? formatMs(pbAo5Ms) : DASH}
               </span>
             </div>
             <div className="session__stat">
-              <span className="session__stat-label">Best Ao12</span>
+              <span className="session__stat-label">{t("Best Ao12")}</span>
               <span className="session__stat-value mono">
                 {pbAo12Ms !== null ? formatMs(pbAo12Ms) : DASH}
               </span>
             </div>
             {summary.breakdown && (
               <div className="session__stat">
-                <span className="session__stat-label">Focus on</span>
+                <span className="session__stat-label">{t("Focus on")}</span>
                 <span className="session__stat-value">
                   {STAGE_LABEL[summary.breakdown.slowest]}{" "}
                   <span className="muted mono session__pct">
@@ -318,7 +324,7 @@ export default function SkillTimer() {
 
           {solves.length > 0 && (
             <div className="recent">
-              <span className="eyebrow">Recent solves</span>
+              <span className="eyebrow">{t("Recent solves")}</span>
               <div className="recent__list">
                 {solves
                   .map((s, i) => ({ t: s.totalMs, n: i + 1 }))
@@ -347,6 +353,7 @@ export default function SkillTimer() {
  * range. Needs at least 2 solves.
  */
 function TimeGraph({ times }: { times: number[] }) {
+  const { t } = useT();
   if (times.length < 2) return null;
   const W = 640;
   const H = 150;
@@ -362,7 +369,7 @@ function TimeGraph({ times }: { times: number[] }) {
   return (
     <div className="timegraph">
       <div className="timegraph__head">
-        <span className="eyebrow">Session times</span>
+        <span className="eyebrow">{t("Session times")}</span>
         <span className="tertiary timegraph__range mono">
           {formatMs(min)} – {formatMs(max)}
         </span>

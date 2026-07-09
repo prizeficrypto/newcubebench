@@ -3183,3 +3183,48 @@
   gap: 12px;
   align-items: flex-start;
 }
+
+/* ---------- language switcher (nav) ---------- */
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+}
+.lang-switch__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.lang-switch__select {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background-color: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 30px 7px 14px;
+  cursor: pointer;
+  /* custom chevron so it matches across browsers */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235f5f66' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition:
+    border-color var(--speed-ui) var(--ease-out),
+    color var(--speed-ui) var(--ease-out);
+}
+.lang-switch__select:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.lang-switch__select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

@@ -13,6 +13,7 @@ import {
 } from "../lib/cubing.ts";
 import type { ClientEvent } from "../lib/events.ts";
 import { CompTimer } from "./CompTimer.tsx";
+import { useT } from "../lib/i18n.tsx";
 
 /**
  * A round in progress. The screen stays purposeful even before the timer runs:
@@ -41,6 +42,7 @@ export function Solving({
   onAttempt: (attempt: Attempt) => void;
   onBack: () => void;
 }) {
+  const { t } = useT();
   // Skill Timer (stage-split) mode is a work in progress: its toggle is
   // disabled and the mode never activates. Only the Regular timer runs.
   const requiredAttempts = event.solves;
@@ -52,16 +54,16 @@ export function Solving({
     <div className="screen container solving">
       <div className="solving__bar">
         <button className="btn--ghost btn" onClick={onBack}>
-          ‹ Back
+          ‹ {t("Back")}
         </button>
         <span
           className="solving__count mono"
-          aria-label={`Solve ${index + 1} of ${total}`}
+          aria-label={`${t("Solve")} ${index + 1} ${t("of")} ${total}`}
         >
           {roundName ? `${roundName} · ` : ""}
           {event.display} · {index + 1} / {total}
         </span>
-        <div className="solving__times mono" aria-label="Times so far">
+        <div className="solving__times mono" aria-label={t("Times so far")}>
           {attempts.map((a, i) => (
             <span key={i} className="solving__time">
               {formatAttempt(a)}
@@ -70,24 +72,24 @@ export function Solving({
         </div>
       </div>
 
-      <div className="timer-mode" role="group" aria-label="Timer mode">
+      <div className="timer-mode" role="group" aria-label={t("Timer mode")}>
         <button
           className="timer-mode__btn is-active"
           aria-pressed={true}
         >
-          Regular
+          {t("Regular")}
         </button>
         <button
           className="timer-mode__btn"
           disabled
           aria-pressed={false}
         >
-          Skill Timer
-          <span className="timer-mode__soon">Soon</span>
+          {t("Skill Timer")}
+          <span className="timer-mode__soon">{t("Soon")}</span>
         </button>
       </div>
       <p className="timer-mode__caption tertiary">
-        Skill Timer (stage splits) is a work in progress.
+        {t("Skill Timer (stage splits) is a work in progress.")}
       </p>
 
       <CompTimer
@@ -120,18 +122,19 @@ function RunningAverage({
   event: ClientEvent;
   total: number;
 }) {
+  const { t } = useT();
   if (attempts.length === 0) return null;
 
   const done = attempts.length;
-  const label = done < total ? "Running" : event.formatName;
+  const label = done < total ? t("Running") : event.formatName;
   const value = runningAverage(attempts, event.format);
 
   return (
     <div className="card run-avg">
       <div className="run-avg__head">
-        <span className="eyebrow">This round</span>
+        <span className="eyebrow">{t("This round")}</span>
         <span className="tertiary run-avg__meta">
-          {done} of {total} done
+          {done} {t("of")} {total} {t("done")}
         </span>
       </div>
       <div className="run-avg__rows">
@@ -152,7 +155,7 @@ function RunningAverage({
         <div className="run-avg__foot">
           <span className="tertiary">{label}</span>
           <span className="mono run-avg__value">
-            {value === null ? "DNF" : formatCentiseconds(value)}
+            {value === null ? t("DNF") : formatCentiseconds(value)}
           </span>
         </div>
       )}
@@ -205,6 +208,7 @@ function UpAgainst({
   event: ClientEvent;
   round: RoundScrambleSet;
 }) {
+  const { t } = useT();
   const [ranking, setRanking] = useState<RankingData | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -237,20 +241,20 @@ function UpAgainst({
   return (
     <div className="card up-against">
       <div className="up-against__head">
-        <span className="eyebrow">Who you're up against</span>
+        <span className="eyebrow">{t("Who you're up against")}</span>
         <span className="tertiary">
-          {ranking.roundName ?? round.roundName ?? "This round"}
+          {ranking.roundName ?? round.roundName ?? t("This round")}
         </span>
       </div>
       <div className="up-against__stats">
         <div className="up-against__stat">
           <span className="up-against__num mono">{ranking.totalCompetitors}</span>
-          <span className="tertiary">in the field</span>
+          <span className="tertiary">{t("in the field")}</span>
         </div>
         {fastest && (
           <div className="up-against__stat">
             <span className="up-against__num mono accent">{fastest}</span>
-            <span className="tertiary">fastest average</span>
+            <span className="tertiary">{t("fastest average")}</span>
           </div>
         )}
         {ranking.nextRound && (
@@ -259,7 +263,7 @@ function UpAgainst({
               {ranking.nextRound.advancedCount}
             </span>
             <span className="tertiary">
-              advance to the {ranking.nextRound.roundName}
+              {t("advance to the")} {ranking.nextRound.roundName}
             </span>
           </div>
         )}

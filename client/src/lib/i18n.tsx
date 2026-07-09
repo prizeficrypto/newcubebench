@@ -6,6 +6,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { dict as flowDict } from "./dict/flow.ts";
+import { dict as resultsDict } from "./dict/results.ts";
+import { dict as homeDict } from "./dict/home.ts";
 
 /**
  * A tiny in-repo i18n. English strings are used as the lookup keys, so any
@@ -701,3 +704,9 @@ export const DICT: Record<Lang, Record<string, string>> = {
     "Something went wrong.": "Algo salió mal.",
   },
 };
+
+// Merge the per-area partial dictionaries into DICT (they're filled
+// incrementally; each maps English source strings to fr/ko/es translations).
+for (const l of ["fr", "ko", "es"] as const) {
+  Object.assign(DICT[l], flowDict[l], resultsDict[l], homeDict[l]);
+}

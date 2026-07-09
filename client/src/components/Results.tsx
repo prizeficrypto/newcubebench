@@ -7,6 +7,7 @@ import {
 } from "../lib/api.ts";
 import { store } from "../lib/store.ts";
 import { useAuth } from "../lib/auth.tsx";
+import { useT } from "../lib/i18n.tsx";
 import {
   attemptCs,
   formatAttempt,
@@ -79,6 +80,7 @@ function WcaCompare({
   averagesAsc: number[];
   total: number;
 }) {
+  const { t } = useT();
   const [wcaId, setWcaId] = useState(() =>
     (store.get(WCA_ID_KEY) ?? "").toUpperCase(),
   );
@@ -93,7 +95,7 @@ function WcaCompare({
   async function lookup(rawId: string) {
     const id = rawId.trim().toUpperCase();
     if (!WCA_ID_RE.test(id)) {
-      setError("That doesn't look like a WCA ID (e.g. 2016PARK01).");
+      setError(t("That doesn't look like a WCA ID (e.g. 2016PARK01)."));
       setResult(null);
       return;
     }
@@ -113,7 +115,7 @@ function WcaCompare({
       setError(
         err instanceof Error && err.message
           ? err.message
-          : "Couldn't reach the WCA — try again.",
+          : t("Couldn't reach the WCA, try again."),
       );
     } finally {
       setLoading(false);
@@ -136,9 +138,9 @@ function WcaCompare({
 
   return (
     <div className="wca-compare">
-      <span className="eyebrow">Compare your real WCA average</span>
+      <span className="eyebrow">{t("Compare your real WCA average")}</span>
       <p className="tertiary wca-compare__hint">
-        Enter your WCA ID to see how your real average compares.
+        {t("Enter your WCA ID to see how your real average compares.")}
       </p>
       <form className="wca-compare__form" onSubmit={onSubmit}>
         <input
@@ -146,29 +148,36 @@ function WcaCompare({
           value={wcaId}
           onChange={(e) => setWcaId(e.target.value.toUpperCase())}
           placeholder="2016PARK01"
-          aria-label="Your WCA ID"
+          aria-label={t("Your WCA ID")}
           autoCapitalize="characters"
           autoCorrect="off"
           spellCheck={false}
           maxLength={10}
         />
         <button className="btn wca-compare__go" type="submit" disabled={loading}>
-          {loading ? "Looking up…" : "Compare"}
+          {loading ? t("Looking up…") : t("Compare")}
         </button>
       </form>
       {error && <p className="wca-compare__error">{error}</p>}
       {result?.kind === "no-average" && (
         <p className="muted wca-compare__line">
-          No official {event.display} average on your WCA record yet.
+          {t("No official {event} average on your WCA record yet.").replace(
+            "{event}",
+            event.display,
+          )}
         </p>
       )}
       {result?.kind === "placed" && (
         <p className="wca-compare__line">
-          Your official WCA {event.formatName} is{" "}
-          <strong className="mono">{formatCentiseconds(result.avgCs)}</strong>,
-          which would place{" "}
-          <strong className="accent mono">{ordinal(result.placement)}</strong> of{" "}
-          <strong className="mono">{total}</strong> in this round.
+          {t("Your official WCA {format} is").replace(
+            "{format}",
+            t(event.formatName),
+          )}{" "}
+          <strong className="mono">{formatCentiseconds(result.avgCs)}</strong>,{" "}
+          {t("which would place")}{" "}
+          <strong className="accent mono">{ordinal(result.placement)}</strong>{" "}
+          {t("of")} <strong className="mono">{total}</strong>{" "}
+          {t("in this round.")}
         </p>
       )}
     </div>
@@ -192,6 +201,7 @@ export function Results({
   onAdvance: (roundTypeId: string, roundName: string) => void;
 }) {
   const { user } = useAuth();
+  const { t } = useT();
 
   // Mean of 3 keeps every attempt; average of 5 drops one best + one worst.
   const drops = event.format === "ao5";
@@ -242,14 +252,14 @@ export function Results({
     setRankError(null);
     setRanking(null);
     if (!round.roundTypeId) {
-      setRankError("round could not be identified");
+      setRankError(t("round could not be identified"));
       return;
     }
     getRanking(comp.id, round.roundTypeId, event.id)
       .then(({ ranking: r }) => {
         if (cancelled) return;
         if (r.totalCompetitors === 0) {
-          setRankError("no official results are published for this round yet");
+          setRankError(t("no official results are published for this round yet"));
           return;
         }
         const averages = r.competitors.map((c) => c.averageCs);
@@ -294,7 +304,7 @@ export function Results({
       })
       .catch((err) => {
         if (!cancelled)
-          setRankError(err instanceof Error ? err.message : "Ranking unavailable");
+          setRankError(err instanceof Error ? err.message : t("Ranking unavailable"));
       });
     return () => {
       cancelled = true;
@@ -312,14 +322,14 @@ export function Results({
   return (
     <div className="screen container results">
       <Rise index={0} className="results__head">
-        <span className="eyebrow">Your result</span>
+        <span className="eyebrow">{t("Your result")}</span>
         <div className="avg-mask" aria-label={`Average ${avgText}`}>
           <div className="results__avg mono avg-rise">{avgText}</div>
         </div>
         <p className="muted results__avg-label">
           {avgCs === null
-            ? `WCA ${event.formatName}: DNF`
-            : `WCA ${event.formatName}`}
+            ? `WCA ${t(event.formatName)}: DNF`
+            : `WCA ${t(event.formatName)}`}
         </p>
       </Rise>
 
@@ -328,9 +338,9 @@ export function Results({
           {avgCs === null && (
             <p className="results__rank-line">
               {drops
-                ? "Two or more DNFs make the average itself a DNF, and in an official round that wouldn't place."
-                : "In a mean of 3 a single DNF makes the whole mean a DNF, and in an official round that wouldn't place."}{" "}
-              Solve the round again and keep it clean.
+                ? t("Two or more DNFs make the average itself a DNF, and in an official round that wouldn't place.")
+                : t("In a mean of 3 a single DNF makes the whole mean a DNF, and in an official round that wouldn't place.")}{" "}
+              {t("Solve the round again and keep it clean.")}
             </p>
           )}
           {avgCs !== null && !ranking && !rankError && (
@@ -341,36 +351,51 @@ export function Results({
           {avgCs !== null && rankError && (
             <div className="results__rank-error">
               <p className="muted">
-                Couldn't place you ({rankError}). Your average is still{" "}
-                {avgText}.
+                {t("Couldn't place you ({error}). Your average is still {avg}.")
+                  .replace("{error}", rankError)
+                  .replace("{avg}", avgText)}
               </p>
               <button
                 className="btn btn--secondary results__retry"
                 onClick={() => setRetryNonce((n) => n + 1)}
               >
-                Try again
+                {t("Try again")}
               </button>
             </div>
           )}
           {avgCs !== null && ranking && (
             <>
               <p className="results__rank-line">
-                Your average of <strong className="mono">{avgText}</strong>{" "}
-                would have placed{" "}
+                {t("Your average of")}{" "}
+                <strong className="mono">{avgText}</strong>{" "}
+                {t("would have placed")}{" "}
                 <strong className="accent mono">
                   {ordinal(ranking.placement)}
                 </strong>{" "}
-                of <strong className="mono">{ranking.total}</strong>
+                {t("of")} <strong className="mono">{ranking.total}</strong>
               </p>
               <p className="muted results__rank-sub">
-                {round.roundName ?? "First round"} of {event.display} at {comp.name}
+                {round.roundName ?? t("First round")} {t("of")} {event.display}{" "}
+                {t("at")} {comp.name}
                 {ranking.fastestCs != null && (
-                  <> · winner averaged {formatCentiseconds(ranking.fastestCs)}</>
+                  <>
+                    {" "}
+                    · {t("winner averaged")}{" "}
+                    {formatCentiseconds(ranking.fastestCs)}
+                  </>
                 )}
               </p>
               <p className="tertiary results__context">
-                Top {Math.max(1, Math.ceil((ranking.placement / ranking.total) * 100))}%
-                of the field{context && <> · {context}</>}
+                {t("Top {pct}% of the field").replace(
+                  "{pct}",
+                  String(
+                    Math.max(
+                      1,
+                      Math.ceil((ranking.placement / ranking.total) * 100),
+                    ),
+                  ),
+                )}
+                {context && <> · {context}</>}
               </p>
             </>
           )}
@@ -397,14 +422,24 @@ export function Results({
             className={`card cut${ranking.qualified ? " cut--in" : " cut--out"}`}
           >
             <span className="cut__badge">
-              {ranking.qualified ? "You'd have advanced" : "You'd have missed the cut"}
+              {ranking.qualified ? t("You'd have advanced") : t("You'd have missed the cut")}
             </span>
             <p className="cut__line">
-              The top <strong className="mono">{ranking.nextRound.advancedCount}</strong>{" "}
-              of {ranking.total} went through to the {ranking.nextRound.roundName}.{" "}
+              {t("The top {count} of {total} went through to the {round}.")
+                .replace("{count}", String(ranking.nextRound.advancedCount))
+                .replace("{total}", String(ranking.total))
+                .replace("{round}", ranking.nextRound.roundName)}{" "}
               {ranking.qualified
-                ? `Your ${ordinal(ranking.placement)} would have made it.`
-                : `Your ${ordinal(ranking.placement)} would have fallen ${ranking.placement - ranking.nextRound.advancedCount} short.`}
+                ? t("Your {place} would have made it.").replace(
+                    "{place}",
+                    ordinal(ranking.placement),
+                  )
+                : t("Your {place} would have fallen {short} short.")
+                    .replace("{place}", ordinal(ranking.placement))
+                    .replace(
+                      "{short}",
+                      String(ranking.placement - ranking.nextRound.advancedCount),
+                    )}
             </p>
             {ranking.qualified && ranking.nextRound.solvable && (
               <button
@@ -416,14 +451,18 @@ export function Results({
                   )
                 }
               >
-                Simulate the {ranking.nextRound.roundName}{" "}
+                {t("Simulate the {round}").replace(
+                  "{round}",
+                  ranking.nextRound.roundName,
+                )}{" "}
                 <span className="arrow">→</span>
               </button>
             )}
             {ranking.qualified && !ranking.nextRound.solvable && (
               <p className="tertiary cut__note">
-                The {ranking.nextRound.roundName}'s scrambles weren't uploaded to
-                the WCA, so it can't be simulated.
+                {t(
+                  "The {round}'s scrambles weren't uploaded to the WCA, so it can't be simulated.",
+                ).replace("{round}", ranking.nextRound.roundName)}
               </p>
             )}
           </div>
@@ -432,10 +471,13 @@ export function Results({
       {ranking && !ranking.nextRound && (
         <Rise index={2}>
           <div className="card cut cut--final">
-            <span className="cut__badge">The final</span>
+            <span className="cut__badge">{t("The final")}</span>
             <p className="cut__line">
-              This was the last round, so your {ordinal(ranking.placement)} of{" "}
-              {ranking.total} would have been your finishing position.
+              {t(
+                "This was the last round, so your {place} of {total} would have been your finishing position.",
+              )
+                .replace("{place}", ordinal(ranking.placement))
+                .replace("{total}", String(ranking.total))}
             </p>
           </div>
         </Rise>
@@ -447,7 +489,7 @@ export function Results({
             {!ranking.podiumInWindow && ranking.podium.length > 0 && (
               <>
                 <div className="board__head">
-                  <span className="eyebrow">Round podium</span>
+                  <span className="eyebrow">{t("Round podium")}</span>
                 </div>
                 <div className="board__rows board__rows--podium">
                   {ranking.podium.map((n) => (
@@ -464,9 +506,9 @@ export function Results({
               </>
             )}
             <div className="board__head">
-              <span className="eyebrow">Where you'd slot in</span>
+              <span className="eyebrow">{t("Where you'd slot in")}</span>
               <span className="tertiary board__sub">
-                Real competitors around your average
+                {t("Real competitors around your average")}
               </span>
             </div>
             <div className="board__rows">
@@ -481,7 +523,7 @@ export function Results({
               ))}
               <div className="board__row board__row--you">
                 <span className="board__rank mono">{ordinal(ranking.placement)}</span>
-                <span className="board__name">You</span>
+                <span className="board__name">{t("You")}</span>
                 <span className="board__time mono">{avgText}</span>
               </div>
               {ranking.below.map((n) => (
@@ -509,8 +551,8 @@ export function Results({
               >
                 <span className="tertiary">{i + 1}</span>
                 <span className="mono">{formatAttempt(a)}</span>
-                {i === bestIdx && <span className="solve-pill__tag">best</span>}
-                {i === worstIdx && <span className="solve-pill__tag">worst</span>}
+                {i === bestIdx && <span className="solve-pill__tag">{t("best")}</span>}
+                {i === worstIdx && <span className="solve-pill__tag">{t("worst")}</span>}
               </div>
             );
           })}
@@ -520,20 +562,20 @@ export function Results({
       <Rise index={5}>
         <p className="tertiary results__drop-note">
           {drops
-            ? "Best and worst are dropped. The average is the mean of the middle three."
-            : "Nothing is dropped. The result is the mean of all three solves."}
+            ? t("Best and worst are dropped. The average is the mean of the middle three.")
+            : t("Nothing is dropped. The result is the mean of all three solves.")}
           {attempts.some((a) => a.plus2 && !a.dnf) &&
-            " A “+” marks a +2 penalty."}
+            ` ${t("A “+” marks a +2 penalty.")}`}
           {drops && attempts.some((a) => a.dnf) &&
-            " A DNF counts as the worst attempt."}
+            ` ${t("A DNF counts as the worst attempt.")}`}
           {!drops && attempts.some((a) => a.dnf) &&
-            " A single DNF makes the mean a DNF."}
+            ` ${t("A single DNF makes the mean a DNF.")}`}
         </p>
       </Rise>
 
       <Rise index={6}>
         <button className="btn btn--secondary" onClick={onRestart}>
-          Try another competition
+          {t("Try another competition")}
         </button>
       </Rise>
     </div>

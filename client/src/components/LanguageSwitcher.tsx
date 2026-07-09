@@ -1,8 +1,9 @@
 import { useT, type Lang } from "../lib/i18n.tsx";
 
 /**
- * Compact language control for the navs. A minimally styled native <select>
- * so it stays keyboard- and screen-reader-friendly and needs no dropdown code.
+ * Compact language control: a clean pill-styled native <select> (keyboard- and
+ * screen-reader-friendly, no dropdown code). The current language shows inside;
+ * the "Language" label is visually hidden.
  */
 const LANGS: { value: Lang; label: string }[] = [
   { value: "en", label: "English" },

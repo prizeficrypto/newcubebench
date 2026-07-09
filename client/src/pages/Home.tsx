@@ -49,8 +49,9 @@ const MARQUEE_COMPS = [
   "CubingUSA Nationals 2019 · Baltimore",
   "World Championship 2013 · Las Vegas",
   "World Championship 2011 · Bangkok",
-  "…and thousands more in the archive",
 ];
+
+const MARQUEE_TAIL = "…and thousands more in the archive";
 
 const FAQ = [
   {
@@ -165,8 +166,10 @@ export default function Home() {
           <div className="stage__avg mono">12.43</div>
           <p className="muted stage__avg-label">{t("WCA average of 5")}</p>
           <p className="results__rank-line">
-            Would have placed <strong className="accent mono">428th</strong> of{" "}
-            <strong className="mono">1014</strong> at CubingUSA Nationals 2023
+            {t("Would have placed")}{" "}
+            <strong className="accent mono">428th</strong> {t("of")}{" "}
+            <strong className="mono">1014</strong> {t("at")} CubingUSA Nationals
+            2023
           </p>
           <div className="results__solves stage__solves">
             <div className="solve-pill">
@@ -198,7 +201,7 @@ export default function Home() {
           className="card stage__float"
           aria-label="Skill Timer session summary"
         >
-          <span className="stage__float-title">Where your time went</span>
+          <span className="stage__float-title">{t("Where your time went")}</span>
           {[
             ["Cross", 21, false],
             ["F2L", 48, true],
@@ -223,9 +226,14 @@ export default function Home() {
       <Reveal className="reveal--full">
         <div className="marquee" aria-hidden="true">
           <div className="marquee__track">
-            {[...MARQUEE_COMPS, ...MARQUEE_COMPS].map((name, i) => (
+            {[
+              ...MARQUEE_COMPS,
+              MARQUEE_TAIL,
+              ...MARQUEE_COMPS,
+              MARQUEE_TAIL,
+            ].map((name, i) => (
               <span className="marquee__item mono" key={i}>
-                {name}
+                {name === MARQUEE_TAIL ? t(name) : name}
               </span>
             ))}
           </div>
@@ -250,8 +258,8 @@ export default function Home() {
         ].map(([title, body], i) => (
           <Reveal key={title} delay={i * 100}>
             <div className="facts__item">
-              <span className="facts__title">{title}</span>
-              <span className="facts__body muted">{body}</span>
+              <span className="facts__title">{t(title)}</span>
+              <span className="facts__body muted">{t(body)}</span>
             </div>
           </Reveal>
         ))}
@@ -284,8 +292,9 @@ export default function Home() {
               </div>
               <h3 className="how__step-title">{t("Pick a real competition")}</h3>
               <p className="muted how__step-body">
-                Any competition in the library, first round through the final.
-                Three featured championships are free.
+                {t(
+                  "Any competition in the library, first round through the final. Three featured championships are free.",
+                )}
               </p>
             </div>
           </Reveal>
@@ -303,8 +312,9 @@ export default function Home() {
               </div>
               <h3 className="how__step-title">{t("Solve the same five scrambles")}</h3>
               <p className="muted how__step-body">
-                Hold-to-start timer, 15 seconds of WCA inspection, and a +2 if
-                you start late. Just like the real round.
+                {t(
+                  "Hold-to-start timer, 15 seconds of WCA inspection, and a +2 if you start late. Just like the real round.",
+                )}
               </p>
             </div>
           </Reveal>
@@ -320,13 +330,14 @@ export default function Home() {
                   <strong className="mono">807</strong>
                 </p>
                 <span className="tertiary how__rank-sub">
-                  against the real field
+                  {t("against the real field")}
                 </span>
               </div>
               <h3 className="how__step-title">{t("See where you'd have placed")}</h3>
               <p className="muted how__step-body">
-                Your Ao5 sits in the official standings. The winner that day
-                averaged 5.88.
+                {t(
+                  "Your Ao5 sits in the official standings. The winner that day averaged 5.88.",
+                )}
               </p>
             </div>
           </Reveal>
@@ -337,12 +348,12 @@ export default function Home() {
       <section className="timerband container--wide">
         <Reveal delay={120}>
           <div className="card timerband__demo" aria-label="The competition timer">
-            <span className="eyebrow">Solve 3 of 5</span>
+            <span className="eyebrow">{t("Solve 3 of 5")}</span>
             <span className="timerband__scramble mono">
               D2 R' F2 U2 R2 B U' L B2 D' F R2 U F2 D2 B2 U' L2 D R2
             </span>
             <span className="timerband__digits mono">11.32</span>
-            <span className="tertiary timerband__hint">Any key to stop</span>
+            <span className="tertiary timerband__hint">{t("Any key to stop")}</span>
           </div>
         </Reveal>
         <Reveal>
@@ -350,14 +361,14 @@ export default function Home() {
             <span className="eyebrow">{t("The timer")}</span>
             <h2 className="h-ink">{t("Conventions cubers already know.")}</h2>
             <p className="muted timerband__body">
-              Hold space until it arms, release to start, and any key stops.
-              Fifteen seconds of WCA inspection runs before every solve, and a
-              late start costs the same +2 it would on the day.
+              {t(
+                "Hold space until it arms, release to start, and any key stops. Fifteen seconds of WCA inspection runs before every solve, and a late start costs the same +2 it would on the day.",
+              )}
             </p>
             <p className="muted timerband__body">
-              Mis-taps aren't fatal either. Every solve can be redone, marked
-              +2, or flagged DNF before it counts, and leaving a round pauses
-              it for later.
+              {t(
+                "Mis-taps aren't fatal either. Every solve can be redone, marked +2, or flagged DNF before it counts, and leaving a round pauses it for later.",
+              )}
             </p>
             <Link className="btn btn--ghost timerband__cta" to="/app">
               {t("Try a solve")} <span className="arrow">→</span>
@@ -371,19 +382,20 @@ export default function Home() {
         <Reveal>
           <div className="card why__card">
             <div className="why__col">
-              <span className="why__label">A regular timer</span>
+              <span className="why__label">{t("A regular timer")}</span>
               <p className="muted">
-                Records your times, draws a graph, and leaves the real question
-                open: would that average survive an actual round?
+                {t(
+                  "Records your times, draws a graph, and leaves the real question open: would that average survive an actual round?",
+                )}
               </p>
             </div>
             <div className="why__divider" aria-hidden="true" />
             <div className="why__col">
               <span className="why__label why__label--accent">Cube Bench</span>
               <p className="muted">
-                Puts your average of 5 next to the official results of a real
-                WCA round, on the exact scrambles those competitors solved,
-                scored the way the round was scored.
+                {t(
+                  "Puts your average of 5 next to the official results of a real WCA round, on the exact scrambles those competitors solved, scored the way the round was scored.",
+                )}
               </p>
             </div>
           </div>
@@ -405,14 +417,16 @@ export default function Home() {
             <Reveal key={num} delay={i * 100}>
               <div className="numbers__item">
                 <span className="numbers__num mono">{num}</span>
-                <span className="numbers__cap muted">{cap}</span>
+                <span className="numbers__cap muted">{t(cap)}</span>
               </div>
             </Reveal>
           ))}
         </div>
         <Reveal delay={280}>
           <p className="tertiary numbers__src">
-            First round of 3×3 at the WCA World Championship 2019, Melbourne.
+            {t(
+              "First round of 3×3 at the WCA World Championship 2019, Melbourne.",
+            )}
           </p>
         </Reveal>
       </section>
@@ -424,9 +438,9 @@ export default function Home() {
             <span className="eyebrow">{t("Also inside")}</span>
             <h2 className="h-ink">{t("Skill Timer")}</h2>
             <p className="muted skillband__body">
-              Practice with stage splits: one tap at the end of Cross, F2L,
-              OLL, and PLL. Session by session, see exactly which stage is
-              eating your time, and whether the work is paying off.
+              {t(
+                "Practice with stage splits: one tap at the end of Cross, F2L, OLL, and PLL. Session by session, see exactly which stage is eating your time, and whether the work is paying off.",
+              )}
             </p>
             <Link className="btn btn--secondary" to="/app/skill-timer">
               {t("Open Skill Timer")}
@@ -442,8 +456,9 @@ export default function Home() {
               </span>
             </div>
             <p className="tertiary skillband__note">
-              Nearly half this session went to F2L. That's where practice pays
-              off first.
+              {t(
+                "Nearly half this session went to F2L. That's where practice pays off first.",
+              )}
             </p>
           </div>
         </Reveal>
@@ -460,12 +475,12 @@ export default function Home() {
             <Reveal key={item.q} delay={i * 60}>
               <details className="faq__item">
                 <summary className="faq__q">
-                  {item.q}
+                  {t(item.q)}
                   <span className="faq__toggle" aria-hidden="true">
                     +
                   </span>
                 </summary>
-                <p className="muted faq__a">{item.a}</p>
+                <p className="muted faq__a">{t(item.a)}</p>
               </details>
             </Reveal>
           ))}
@@ -479,11 +494,9 @@ export default function Home() {
             <span className="eyebrow claim__eyebrow">{t("Why we built this")}</span>
             <h2 className="claim__title">{t("Make it measurable.")}</h2>
             <p className="claim__body">
-              Cube timer websites haven't changed in years, and none of them
-              answer the question everyone practicing at home has: am I ready
-              for a real competition? Cube Bench turns that into a measurement.
-              Solve a real round, see where you'd have landed, and sign up for
-              your first competition because the numbers say you're ready.
+              {t(
+                "Cube timer websites haven't changed in years, and none of them answer the question everyone practicing at home has: am I ready for a real competition? Cube Bench turns that into a measurement. Solve a real round, see where you'd have landed, and sign up for your first competition because the numbers say you're ready.",
+              )}
             </p>
             <Link className="btn claim__cta" to="/app">
               {t("Launch App")}
@@ -500,7 +513,7 @@ export default function Home() {
               <Mark size={14} className="footer__mark" /> Cube Bench
             </span>
             <span className="tertiary footer__tag">
-              The competition benchmark for speedcubers.
+              {t("The competition benchmark for speedcubers.")}
             </span>
           </div>
           <div className="footer__col">
@@ -529,8 +542,10 @@ export default function Home() {
           </div>
         </div>
         <div className="container--wide footer__legal tertiary">
-          Built on the WCA's public API. Not affiliated with the World Cube
-          Association. © 2026 Cube Bench.
+          {t(
+            "Built on the WCA's public API. Not affiliated with the World Cube Association.",
+          )}{" "}
+          © 2026 Cube Bench.
         </div>
       </footer>
     </div>

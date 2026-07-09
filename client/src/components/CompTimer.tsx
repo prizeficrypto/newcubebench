@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatAttempt, formatMs, type Attempt } from "../lib/cubing.ts";
 import { isTouchDevice } from "../lib/pointer.ts";
+import { useT } from "../lib/i18n.tsx";
 
 /**
  * Solve timer. Two shapes, picked by the `inspection` prop:
@@ -33,6 +34,7 @@ export function CompTimer({
   /** 15s WCA inspection before the solve (competition Simulator) */
   inspection?: boolean;
 }) {
+  const { t } = useT();
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [inspElapsed, setInspElapsed] = useState(0);
@@ -175,13 +177,15 @@ export function CompTimer({
   const over = inspElapsed > INSPECTION_MS;
   const inspLeft = Math.max(0, Math.ceil((INSPECTION_MS - inspElapsed) / 1000));
   const call =
-    inspElapsed >= 12_000 ? "12 seconds" : inspElapsed >= 8_000 ? "8 seconds" : "";
+    inspElapsed >= 12_000 ? t("12 seconds") : inspElapsed >= 8_000 ? t("8 seconds") : "";
 
   return (
     <div className="solve">
       <div className="solve__head">
         <span className="eyebrow">
-          {practice ? `Solve ${solveIndex + 1}` : `Solve ${solveIndex + 1} of ${totalSolves}`}
+          {practice
+            ? `${t("Solve")} ${solveIndex + 1}`
+            : `${t("Solve")} ${solveIndex + 1} ${t("of")} ${totalSolves}`}
         </span>
         <div className="solve__scramble mono">{scramble}</div>
       </div>
@@ -197,11 +201,11 @@ export function CompTimer({
             <div className="timer__hint" role="status" aria-live="polite">
               {inspection
                 ? touch
-                  ? "Tap to start inspection."
-                  : "Press space to start inspection."
+                  ? t("Tap to start inspection.")
+                  : t("Press space to start inspection.")
                 : touch
-                  ? "Tap the screen to start. Tap again to stop."
-                  : "Press space to start. Press any key to stop."}
+                  ? t("Tap the screen to start. Tap again to stop.")
+                  : t("Press space to start. Press any key to stop.")}
             </div>
           </div>
         )}
@@ -214,10 +218,10 @@ export function CompTimer({
             <div className="timer__hint" role="status" aria-live="polite">
               {call && <span className="inspect__call">{call}</span>}
               {over
-                ? "Over 15 seconds — this solve is +2. Start when ready."
+                ? t("Over 15 seconds. This solve is +2. Start when ready.")
                 : touch
-                  ? "Inspecting. Tap to start your solve."
-                  : "Inspecting. Press space to start your solve."}
+                  ? t("Inspecting. Tap to start your solve.")
+                  : t("Inspecting. Press space to start your solve.")}
             </div>
           </div>
         )}
@@ -226,7 +230,7 @@ export function CompTimer({
           <div className="timer timer--running">
             <div className="timer__time mono">{formatMs(elapsed)}</div>
             <div className="timer__hint" role="status" aria-live="polite">
-              {touch ? "Tap to stop" : "Any key to stop"}
+              {touch ? t("Tap to stop") : t("Any key to stop")}
             </div>
           </div>
         )}
@@ -236,12 +240,12 @@ export function CompTimer({
             <div className="timer__time mono">{formatAttempt(result)}</div>
             <div className="timer__hint" role="status" aria-live="polite">
               {result.dnf
-                ? "Marked as DNF, so it won't count as a time"
+                ? t("Marked as DNF, so it won't count as a time")
                 : penaltyRef.current
-                  ? `Inspection ran past 15 seconds. +2 included (stopwatch read ${formatMs(result.rawMs)})`
+                  ? `${t("Inspection ran past 15 seconds. +2 included (stopwatch read")} ${formatMs(result.rawMs)})`
                   : result.plus2
-                    ? `+2 applied (stopwatch read ${formatMs(result.rawMs)})`
-                    : "Solve complete"}
+                    ? `${t("+2 applied (stopwatch read")} ${formatMs(result.rawMs)})`
+                    : t("Solve complete")}
             </div>
           </div>
         )}
@@ -253,9 +257,9 @@ export function CompTimer({
             <button
               className="post__chip"
               onClick={resetSolve}
-              title="Discard this attempt and solve the same scramble again"
+              title={t("Discard this attempt and solve the same scramble again")}
             >
-              Redo
+              {t("Redo")}
             </button>
             <button
               className={`post__chip post__chip--plus2${result.plus2 ? " is-on" : ""}`}
@@ -263,28 +267,28 @@ export function CompTimer({
               disabled={penaltyRef.current}
               title={
                 penaltyRef.current
-                  ? "Automatic: inspection ran past 15 seconds"
-                  : "Mark a +2 penalty on this attempt"
+                  ? t("Automatic: inspection ran past 15 seconds")
+                  : t("Mark a +2 penalty on this attempt")
               }
               onClick={() =>
                 setResult((r) => (r ? { ...r, plus2: !r.plus2 } : r))
               }
             >
-              +2
+              {t("+2")}
             </button>
             <button
               className={`post__chip post__chip--dnf${result.dnf ? " is-on" : ""}`}
               aria-pressed={Boolean(result.dnf)}
-              title="Mark this attempt as Did Not Finish"
+              title={t("Mark this attempt as Did Not Finish")}
               onClick={() =>
                 setResult((r) => (r ? { ...r, dnf: !r.dnf } : r))
               }
             >
-              DNF
+              {t("DNF")}
             </button>
           </div>
           <button className="btn" onClick={() => onComplete(result)} autoFocus>
-            {practice ? "Solve again" : isLast ? "See your ranking" : "Next solve"}
+            {practice ? t("Solve again") : isLast ? t("See your ranking") : t("Next solve")}
           </button>
         </div>
       )}

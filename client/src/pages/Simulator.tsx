@@ -16,6 +16,7 @@ import { CompetitionPicker } from "../components/CompetitionPicker.tsx";
 import { Solving } from "../components/Solving.tsx";
 import { Results } from "../components/Results.tsx";
 import { Mark } from "../components/Mark.tsx";
+import { useT } from "../lib/i18n.tsx";
 
 type Step =
   | "picking"
@@ -47,6 +48,7 @@ type SavedRound = {
 export default function Simulator() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useT();
   const [step, setStep] = useState<Step>("picking");
   const [comp, setComp] = useState<Competition | null>(null);
   const [events, setEvents] = useState<EventMeta[]>([]);
@@ -208,7 +210,7 @@ export default function Simulator() {
     if (
       saved &&
       !window.confirm(
-        `Discard your paused round at ${saved.comp.name}? ${saved.attempts.length} solve${saved.attempts.length === 1 ? "" : "s"} will be lost.`,
+        `${t("Discard your paused round at")} ${saved.comp.name}? ${saved.attempts.length} ${saved.attempts.length === 1 ? t("solve will be lost.") : t("solves will be lost.")}`,
       )
     ) {
       return;
@@ -256,14 +258,14 @@ export default function Simulator() {
             <div className="screen container resume">
               <div className="card resume__card">
                 <div className="resume__info">
-                  <span className="eyebrow">Paused round</span>
+                  <span className="eyebrow">{t("Paused round")}</span>
                   <span className="resume__name">
                     {saved.comp.name}
                     {saved.round.roundName ? ` · ${saved.round.roundName}` : ""}
                   </span>
                   <span className="tertiary resume__meta">
-                    {saved.attempts.length} of {eventOrDefault(saved.eventId).solves}{" "}
-                    solves done · {eventOrDefault(saved.eventId).display}
+                    {saved.attempts.length} {t("of")} {eventOrDefault(saved.eventId).solves}{" "}
+                    {t("solves done")} · {eventOrDefault(saved.eventId).display}
                   </span>
                 </div>
                 <div className="resume__actions">
@@ -277,10 +279,10 @@ export default function Simulator() {
                       setStep("solving");
                     }}
                   >
-                    Resume
+                    {t("Resume")}
                   </button>
                   <button className="btn btn--ghost" onClick={discardSaved}>
-                    Discard
+                    {t("Discard")}
                   </button>
                 </div>
               </div>
@@ -370,17 +372,18 @@ function EventChooser({
   onChoose: (event: EventMeta) => void;
   onBack: () => void;
 }) {
+  const { t } = useT();
   return (
     <div className="screen container picker">
       <div className="picker__head">
         <button className="btn--ghost btn picker__back" onClick={onBack}>
-          ‹ Competitions
+          ‹ {t("Competitions")}
         </button>
-        <span className="eyebrow">Step 2</span>
-        <h2 className="title">Choose an event</h2>
+        <span className="eyebrow">{t("Step 2")}</span>
+        <h2 className="title">{t("Choose an event")}</h2>
         <p className="muted">
-          {comp.name} held {events.length} event{events.length === 1 ? "" : "s"}{" "}
-          you can simulate. Pick one to see its rounds.
+          {comp.name} {t("held")} {events.length}{" "}
+          {events.length === 1 ? t("event you can simulate. Pick one to see its rounds.") : t("events you can simulate. Pick one to see its rounds.")}
         </p>
       </div>
 
@@ -399,7 +402,7 @@ function EventChooser({
               <span className="lvl__label">{ev.display}</span>
               <span className="ev-fmt">
                 <span className="ev-fmt__tag">
-                  {ev.format === "mo3" ? "Mean of 3" : "Average of 5"}
+                  {ev.format === "mo3" ? t("Mean of 3") : t("Average of 5")}
                 </span>
                 <span className="ev-fmt__chev" aria-hidden="true">
                   ›
@@ -411,7 +414,7 @@ function EventChooser({
       </div>
 
       <p className="picker__plan-note tertiary">
-        Blindfolded and Fewest Moves events aren't supported yet.
+        {t("Blindfolded and Fewest Moves events aren't supported yet.")}
       </p>
 
       {loading && (
@@ -440,18 +443,20 @@ function RoundChooser({
   onChoose: (meta: RoundMeta) => void;
   onBack: () => void;
 }) {
+  const { t } = useT();
   return (
     <div className="screen container picker">
       <div className="picker__head">
         <button className="btn--ghost btn picker__back" onClick={onBack}>
-          ‹ Back
+          ‹ {t("Back")}
         </button>
-        <span className="eyebrow">Step 3</span>
-        <h2 className="title">Choose a round</h2>
+        <span className="eyebrow">{t("Step 3")}</span>
+        <h2 className="title">{t("Choose a round")}</h2>
         <p className="muted">
-          {comp.name} ran {rounds.length} round{rounds.length === 1 ? "" : "s"} of{" "}
-          {event.display}. Solve any of them. Later rounds rank you against the
-          field that advanced.
+          {comp.name} {t("ran")} {rounds.length}{" "}
+          {rounds.length === 1 ? t("round of") : t("rounds of")}{" "}
+          {event.display}.{" "}
+          {t("Solve any of them. Later rounds rank you against the field that advanced.")}
         </p>
       </div>
 
@@ -467,7 +472,7 @@ function RoundChooser({
           >
             <span className="lvl__label">{r.roundName}</span>
             <span className="lvl__range mono">
-              {i === 0 ? "everyone" : "advanced"} ›
+              {i === 0 ? t("everyone") : t("advanced")} ›
             </span>
           </button>
         ))}
@@ -501,6 +506,7 @@ function Qualified({
   onBack: () => void;
   onRetry: () => void;
 }) {
+  const { t } = useT();
   // stagger the entrance like the rest of the gate (60ms per element)
   const d = (i: number) => ({ animationDelay: `${i * 60}ms` });
   return (
@@ -510,14 +516,14 @@ function Qualified({
         <span className="qualified__ring" />
       </div>
       <span className="eyebrow gate__item qualified__eyebrow" style={d(1)}>
-        You made the cut
+        {t("You made the cut")}
       </span>
       <h1 className="display qualified__title gate__item" style={d(2)}>
-        Congratulations!
+        {t("Congratulations!")}
       </h1>
       <p className="lead qualified__lead gate__item" style={d(3)}>
-        You qualified for the <strong>{roundName}</strong>. Only the fastest
-        advanced. Solve their scrambles and see if you'd hold your ground.
+        {t("You qualified for the")} <strong>{roundName}</strong>.{" "}
+        {t("Only the fastest advanced. Solve their scrambles and see if you'd hold your ground.")}
       </p>
 
       <div className="qualified__actions gate__item" style={d(4)}>
@@ -525,22 +531,22 @@ function Qualified({
           <>
             <p className="gate__error">{error}</p>
             <button className="btn btn--secondary" onClick={onRetry}>
-              Try again
+              {t("Try again")}
             </button>
           </>
         ) : (
           <button className="btn qualified__cta" disabled={!ready} onClick={onStart}>
             {ready ? (
               <>
-                Start the {roundName} <span className="arrow">→</span>
+                {t("Start the")} {roundName} <span className="arrow">→</span>
               </>
             ) : (
-              "Loading scrambles…"
+              t("Loading scrambles…")
             )}
           </button>
         )}
         <button className="btn--ghost btn qualified__back" onClick={onBack}>
-          Back to results
+          {t("Back to results")}
         </button>
       </div>
     </div>
