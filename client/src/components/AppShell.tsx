@@ -2,7 +2,6 @@ import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../lib/auth.tsx";
 import { Mark } from "./Mark.tsx";
 import { useT } from "../lib/i18n.tsx";
-import { LanguageSwitcher } from "./LanguageSwitcher.tsx";
 
 /**
  * Everything behind "Launch App". Open to guests — they can run the featured
@@ -58,7 +57,12 @@ export function AppShell() {
             >
               {t("Pricing")}
             </NavLink>
-            <LanguageSwitcher />
+            <NavLink
+              to="/app/settings"
+              className={({ isActive }) => `nav__link${isActive ? " is-active" : ""}`}
+            >
+              {t("Settings")}
+            </NavLink>
             {user ? (
               <>
                 <span className="nav__user-chip" title={user.email}>

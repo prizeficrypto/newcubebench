@@ -3097,3 +3097,45 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ---------- settings page ---------- */
+.settings__head {
+  margin-bottom: 22px;
+}
+.settings__section {
+  padding: 22px 24px;
+  margin-bottom: 16px;
+}
+.settings__title {
+  font-size: 16px;
+  margin: 0 0 14px;
+}
+.settings__langs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.settings__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+}
+.settings__row:last-of-type {
+  border-bottom: none;
+}
+.settings__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.settings__guest {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}

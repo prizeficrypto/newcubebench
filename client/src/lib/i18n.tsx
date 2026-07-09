@@ -86,6 +86,16 @@ export const DICT: Record<Lang, Record<string, string>> = {
   fr: {
     // --- nav ---
     "Competitions": "Compétitions",
+    "Settings": "Paramètres",
+    "Language": "Langue",
+    "Account": "Compte",
+    "Email": "E-mail",
+    "Plan": "Forfait",
+    "Manage plan": "Gérer le forfait",
+    "Free": "Gratuit",
+    "Pro": "Pro",
+    "Pro (free month)": "Pro (mois gratuit)",
+    "You're browsing as a guest.": "Vous naviguez en tant qu'invité.",
     "Timer": "Chronomètre",
     "Pricing": "Tarifs",
     "Sign out": "Se déconnecter",
@@ -138,8 +148,6 @@ export const DICT: Record<Lang, Record<string, string>> = {
     "Cube Bench Pro, free month": "Cube Bench Pro, mois gratuit",
     "Cube Bench Pro": "Cube Bench Pro",
     "Your subscription is active.": "Votre abonnement est actif.",
-    "Free": "Gratuit",
-    "Pro": "Pro",
     "Three featured competitions to simulate": "Trois compétitions en vedette à simuler",
     "Unlimited practice on the regular timer": "Pratique illimitée sur le chronomètre classique",
     "Real scrambles, real fields, exact WCA scoring":
@@ -284,6 +292,16 @@ export const DICT: Record<Lang, Record<string, string>> = {
   ko: {
     // --- nav ---
     "Competitions": "대회",
+    "Settings": "설정",
+    "Language": "언어",
+    "Account": "계정",
+    "Email": "이메일",
+    "Plan": "플랜",
+    "Manage plan": "플랜 관리",
+    "Free": "무료",
+    "Pro": "프로",
+    "Pro (free month)": "프로 (무료 한 달)",
+    "You're browsing as a guest.": "게스트로 둘러보는 중입니다.",
     "Timer": "타이머",
     "Pricing": "요금제",
     "Sign out": "로그아웃",
@@ -336,8 +354,6 @@ export const DICT: Record<Lang, Record<string, string>> = {
     "Cube Bench Pro, free month": "Cube Bench Pro, 무료 한 달",
     "Cube Bench Pro": "Cube Bench Pro",
     "Your subscription is active.": "구독이 활성화되어 있습니다.",
-    "Free": "무료",
-    "Pro": "Pro",
     "Three featured competitions to simulate": "시뮬레이션 가능한 추천 대회 세 개",
     "Unlimited practice on the regular timer": "일반 타이머로 무제한 연습",
     "Real scrambles, real fields, exact WCA scoring":
@@ -482,6 +498,16 @@ export const DICT: Record<Lang, Record<string, string>> = {
   es: {
     // --- nav ---
     "Competitions": "Competiciones",
+    "Settings": "Ajustes",
+    "Language": "Idioma",
+    "Account": "Cuenta",
+    "Email": "Correo",
+    "Plan": "Plan",
+    "Manage plan": "Gestionar plan",
+    "Free": "Gratis",
+    "Pro": "Pro",
+    "Pro (free month)": "Pro (mes gratis)",
+    "You're browsing as a guest.": "Estás navegando como invitado.",
     "Timer": "Cronómetro",
     "Pricing": "Precios",
     "Sign out": "Cerrar sesión",
@@ -534,8 +560,6 @@ export const DICT: Record<Lang, Record<string, string>> = {
     "Cube Bench Pro, free month": "Cube Bench Pro, mes gratis",
     "Cube Bench Pro": "Cube Bench Pro",
     "Your subscription is active.": "Tu suscripción está activa.",
-    "Free": "Gratis",
-    "Pro": "Pro",
     "Three featured competitions to simulate": "Tres competiciones destacadas para simular",
     "Unlimited practice on the regular timer": "Práctica ilimitada en el cronómetro normal",
     "Real scrambles, real fields, exact WCA scoring":
