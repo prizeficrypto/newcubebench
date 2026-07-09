@@ -115,7 +115,14 @@
       "Bash(curl -s -w \" status=%{http_code}\\\\n\" http://localhost:4055/api/wca/person/1000ZZZZ99)",
       "Bash(kill %1)",
       "Bash(pkill -f \"PORT=4055\")",
-      "Bash(curl -s -o /dev/null -w \"4055 now: %{http_code}\\\\n\" http://localhost:4055/health)"
+      "Bash(curl -s -o /dev/null -w \"4055 now: %{http_code}\\\\n\" http://localhost:4055/health)",
+      "Bash(cat)",
+      "Bash(node --env-file=server/.env /tmp/migrate.mjs)",
+      "Bash(node --env-file=.env _migrate.mjs)",
+      "Bash(rm -f _migrate.mjs)",
+      "Bash(curl -s --max-time 8 localhost:4000/api/promo)",
+      "Bash(curl -s --max-time 12 -X POST localhost:4000/api/auth/signup -H 'Content-Type: application/json' -d '{\"email\":\"__TRACKED_VAR__\",\"password\":\"testpass123\",\"name\":\"Promo\"}')",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const u=JSON.parse\\(d\\).user;console.log\\('pro:',u.pro,'| promoUntil set:',!!u.promoUntil,'| ~days:',u.promoUntil?Math.round\\(\\(u.promoUntil-Date.now\\(\\)\\)/86400000\\):null\\)}\\)\")"
     ]
   }
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/auth.tsx";
-import { submitEarlyAccess } from "../lib/api.ts";
+import { getPromo, submitEarlyAccess } from "../lib/api.ts";
 
 /**
  * Two plans. Pro is a real Stripe subscription ($3.49/mo, 3-day trial) when
@@ -15,6 +15,14 @@ export default function Pricing() {
   const [params, setParams] = useSearchParams();
   const [notice, setNotice] = useState<string | null>(null);
   const [plan, setPlan] = useState<Plan>("annual");
+
+  // Which state the visitor is in. `onPromo` = signed-in on the free "first
+  // 100" month (Pro via promoUntil, no Stripe sub, so no Manage button).
+  // `proViaStripe` = Pro but not on the promo month (a real subscription).
+  // Everyone else (signed-in free or guest) sees the plan cards + promo banner.
+  const onPromo = Boolean(user?.promoUntil && user.promoUntil > Date.now());
+  const proViaStripe = Boolean(user?.pro) && !onPromo;
+  const showPlans = !onPromo && !proViaStripe;
 
   // Returning from Stripe Checkout: refresh the plan and show the outcome.
   useEffect(() => {
@@ -34,12 +42,38 @@ export default function Pricing() {
   return (
     <div className="screen container pricing">
       <div className="pricing__head">
-        <span className="eyebrow">Pricing</span>
-        <h1 className="title">Practice free. Benchmark any competition with Pro.</h1>
+        <span className="eyebrow">{showPlans ? "Pricing" : "Your account"}</span>
+        <h1 className="title">
+          {showPlans
+            ? "Practice free. Benchmark any competition with Pro."
+            : "You're on Cube Bench Pro."}
+        </h1>
       </div>
 
       {notice && <div className="card pricing__notice">{notice}</div>}
 
+      {onPromo && user?.promoUntil && (
+        <div className="card pricing__plan">
+          <span className="why__label why__label--accent">Your plan</span>
+          <p className="pricing__plan-name">Cube Bench Pro, free month</p>
+          <p className="muted">
+            Your free month ends {formatPromoEnd(user.promoUntil)}. No card needed.
+          </p>
+        </div>
+      )}
+
+      {proViaStripe && (
+        <div className="card pricing__plan">
+          <span className="why__label why__label--accent">Your plan</span>
+          <p className="pricing__plan-name">Cube Bench Pro</p>
+          <p className="muted">Your subscription is active.</p>
+          <ManageSubscription openPortal={openPortal} />
+        </div>
+      )}
+
+      {showPlans && <PromoBanner isGuest={!user} />}
+
+      {showPlans && (
       <div className="card pricing__card">
         <div className="pricing__col">
           <span className="why__label">Free</span>
@@ -93,9 +127,12 @@ export default function Pricing() {
             )}
           </p>
           <ul className="plan__features">
-            <li>The entire library of past WCA competitions</li>
-            <li>Skill Timer — stage-split timing and where your time goes</li>
+            <li>The entire WCA competition library</li>
             <li>Everything in Free</li>
+            <li className="plan__feature--soon">
+              Skill Timer, stage-split timing
+              <span className="plan__soon">Coming soon</span>
+            </li>
           </ul>
           <ProAction
             isPro={Boolean(user?.pro)}
@@ -106,12 +143,15 @@ export default function Pricing() {
           />
         </div>
       </div>
+      )}
 
-      <p className="pricing__note tertiary">
-        {billingAvailable
-          ? "Cancel anytime. Your free trial won't be charged until it ends, and yearly saves 40% over paying monthly."
-          : "Pro is launching soon. No payment is taken now."}
-      </p>
+      {showPlans && (
+        <p className="pricing__note tertiary">
+          {billingAvailable
+            ? "Cancel anytime. Your free trial won't be charged until it ends, and yearly saves 40% over paying monthly."
+            : "Pro is launching soon. No payment is taken now."}
+        </p>
+      )}
 
       <div className="faq pricing__faq">
         <span className="eyebrow pricing__faq-head">Questions</span>
@@ -140,6 +180,83 @@ export default function Pricing() {
           </details>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** "August 8, 2026" from an epoch-ms timestamp. */
+function formatPromoEnd(ms: number): string {
+  return new Date(ms).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+/** "Manage subscription" — opens the Stripe billing portal (Stripe subs only). */
+function ManageSubscription({ openPortal }: { openPortal: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className="plan__cta-wrap">
+      <button
+        className="btn btn--secondary plan__cta"
+        disabled={busy}
+        onClick={async () => {
+          setError(null);
+          setBusy(true);
+          try {
+            await openPortal(); // redirects to Stripe on success
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Something went wrong.");
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? "Opening…" : "Manage subscription"}
+      </button>
+      {error && <p className="plan__error">{error}</p>}
+    </div>
+  );
+}
+
+/**
+ * The "first 100" incentive. For a not-Pro visitor, fetch the live spot count.
+ * While spots remain we show a calm banner; a guest gets a "Create a free
+ * account" link, a signed-in free user just sees the normal Pro upgrade below.
+ * Once spots run out (remaining === 0) we show nothing at all.
+ */
+function PromoBanner({ isGuest }: { isGuest: boolean }) {
+  const [remaining, setRemaining] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPromo()
+      .then((p) => {
+        if (!cancelled) setRemaining(p.remaining);
+      })
+      .catch(() => {
+        /* the promo banner is a bonus; a failure just hides it */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (remaining === null || remaining <= 0) return null;
+
+  return (
+    <div className="card pricing__promo">
+      <span className="why__label why__label--accent">Free for the first 100</span>
+      <p className="pricing__promo-copy">
+        First 100 sign-ups get Cube Bench Pro free for a month. No card.{" "}
+        <strong>{remaining} of 100 spots left.</strong>
+      </p>
+      {isGuest && (
+        <Link className="btn plan__cta pricing__promo-cta" to="/join">
+          Create a free account
+        </Link>
+      )}
     </div>
   );
 }

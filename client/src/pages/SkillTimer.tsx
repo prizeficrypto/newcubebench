@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { CompTimer } from "../components/CompTimer.tsx";
 import { SolveTimer } from "../components/SolveTimer.tsx";
-import { useAuth } from "../lib/auth.tsx";
-import { nextScramble, warmUp } from "../lib/scrambles.ts";
+import { PRACTICE_EVENT_IDS, randomScramble } from "../lib/scrambles.ts";
+import { eventOrDefault } from "../lib/events.ts";
 import { store } from "../lib/store.ts";
 import {
   formatMs,
@@ -15,67 +14,57 @@ import {
 } from "../lib/cubing.ts";
 
 /**
- * The Timer: free-form 3x3 practice, unlimited solves.
+ * The Timer: free-form practice on any supported puzzle, unlimited solves.
+ * Each puzzle keeps its own session and personal bests (so switching from 3x3
+ * to 2x2 doesn't mix stats). Scrambles are random-move, generated locally.
  *
- *   Regular — one start, one stop. A plain solve timer (default).
- *   Skill Timer — tap the spacebar at the end of each stage (cross, F2L, OLL,
- *                 PLL); the session summary then shows where your time goes.
- *
- * The session (either kind of solve) survives navigation and refresh.
+ * (Skill Timer — the stage-split mode — is a work in progress and disabled.)
  */
-const SESSION_KEY = "cb_timer_session_v2";
-/** Personal bests (ms) persisted across sessions — 3x3 practice. */
-const PB_KEY = "cb_timer_pb_v1";
-const PB_AO5_KEY = "cb_timer_pb_ao5_v1";
-const PB_AO12_KEY = "cb_timer_pb_ao12_v1";
+const sessKey = (ev: string) => `cb_timer_sess_v3:${ev}`;
+const pbKey = (ev: string) => `cb_timer_pb_v2:${ev}`;
+const pbAo5Key = (ev: string) => `cb_timer_pb_ao5_v2:${ev}`;
+const pbAo12Key = (ev: string) => `cb_timer_pb_ao12_v2:${ev}`;
 
 type Mode = "regular" | "skill";
 /** A practice solve. Stage splits are present only for Skill-Timer solves. */
 type PracticeSolve = { totalMs: number; stages?: Solve["stages"] };
 
 export default function SkillTimer() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const isPro = Boolean(user?.pro);
   const [mode, setMode] = useState<Mode>("regular");
-  const [scramble, setScramble] = useState<string | null>(null);
+  const [event, setEvent] = useState<string>("333");
+  const [scramble, setScramble] = useState<string>(() => randomScramble("333"));
 
-  // Skill Timer (stage splits) is a Pro feature — non-Pro users are sent to
-  // Pricing instead of switching modes.
+  // Skill Timer (stage splits) is a work in progress: its toggle is disabled
+  // and the mode never switches to "skill". Only Regular is selectable.
   function chooseMode(next: Mode) {
-    if (next === "skill" && !user) {
-      navigate("/join"); // guests: create an account first
-      return;
-    }
-    if (next === "skill" && !isPro) {
-      navigate("/app/pricing");
-      return;
-    }
+    if (next === "skill") return;
     setMode(next);
   }
+
   const [solves, setSolves] = useState<PracticeSolve[]>(
-    () => store.getJson<PracticeSolve[]>(SESSION_KEY) ?? [],
+    () => store.getJson<PracticeSolve[]>(sessKey("333")) ?? [],
   );
-  // Personal bests survive across sessions and a session reset. Loaded once.
-  const [pbMs, setPbMs] = useState<number | null>(
-    () => store.getJson<number>(PB_KEY),
-  );
+  // Personal bests are per puzzle and survive across sessions + a reset.
+  const [pbMs, setPbMs] = useState<number | null>(() => store.getJson<number>(pbKey("333")));
   const [pbAo5Ms, setPbAo5Ms] = useState<number | null>(
-    () => store.getJson<number>(PB_AO5_KEY),
+    () => store.getJson<number>(pbAo5Key("333")),
   );
   const [pbAo12Ms, setPbAo12Ms] = useState<number | null>(
-    () => store.getJson<number>(PB_AO12_KEY),
+    () => store.getJson<number>(pbAo12Key("333")),
   );
 
   const loadScramble = useCallback(() => {
-    setScramble(null);
-    nextScramble().then(setScramble);
-  }, []);
+    setScramble(randomScramble(event));
+  }, [event]);
 
+  // Switching puzzles swaps in that puzzle's saved session, PBs, and scramble.
   useEffect(() => {
-    warmUp();
-    loadScramble();
-  }, [loadScramble]);
+    setSolves(store.getJson<PracticeSolve[]>(sessKey(event)) ?? []);
+    setPbMs(store.getJson<number>(pbKey(event)));
+    setPbAo5Ms(store.getJson<number>(pbAo5Key(event)));
+    setPbAo12Ms(store.getJson<number>(pbAo12Key(event)));
+    setScramble(randomScramble(event));
+  }, [event]);
 
   // Whenever a solve lands, capture new all-time best rolling averages. Each
   // new solve makes exactly one new 5- and 12-window "current", so checking
@@ -87,7 +76,7 @@ export default function SkillTimer() {
     if (a5 !== null) {
       setPbAo5Ms((p) => {
         if (p !== null && p <= a5) return p;
-        store.setJson(PB_AO5_KEY, a5);
+        store.setJson(pbAo5Key(event), a5);
         return a5;
       });
     }
@@ -95,21 +84,21 @@ export default function SkillTimer() {
     if (a12 !== null) {
       setPbAo12Ms((p) => {
         if (p !== null && p <= a12) return p;
-        store.setJson(PB_AO12_KEY, a12);
+        store.setJson(pbAo12Key(event), a12);
         return a12;
       });
     }
-  }, [solves]);
+  }, [solves, event]);
 
   function record(solve: PracticeSolve) {
     setSolves((prev) => {
       const next = [...prev, solve];
-      store.setJson(SESSION_KEY, next);
+      store.setJson(sessKey(event), next);
       return next;
     });
     setPbMs((prev) => {
       if (prev !== null && prev <= solve.totalMs) return prev;
-      store.setJson(PB_KEY, solve.totalMs);
+      store.setJson(pbKey(event), solve.totalMs);
       return solve.totalMs;
     });
     loadScramble();
@@ -137,7 +126,7 @@ export default function SkillTimer() {
     ) {
       return;
     }
-    store.remove(SESSION_KEY);
+    store.remove(sessKey(event));
     setSolves([]);
   }
 
@@ -148,6 +137,24 @@ export default function SkillTimer() {
     <div className="screen container--wide skill">
       <div className="skill__layout">
         <div className="skill__main">
+          <div className="timer-puzzle">
+            <label className="tertiary timer-puzzle__label" htmlFor="puzzle">
+              Puzzle
+            </label>
+            <select
+              id="puzzle"
+              className="timer-puzzle__select"
+              value={event}
+              onChange={(e) => setEvent(e.target.value)}
+            >
+              {PRACTICE_EVENT_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {eventOrDefault(id).display}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="timer-mode" role="group" aria-label="Timer mode">
             <button
               className={`timer-mode__btn${mode === "regular" ? " is-active" : ""}`}
@@ -157,14 +164,17 @@ export default function SkillTimer() {
               Regular
             </button>
             <button
-              className={`timer-mode__btn${mode === "skill" ? " is-active" : ""}`}
-              onClick={() => chooseMode("skill")}
-              aria-pressed={mode === "skill"}
+              className="timer-mode__btn"
+              disabled
+              aria-pressed={false}
             >
               Skill Timer
-              {!isPro && <span className="timer-mode__pro">Pro</span>}
+              <span className="timer-mode__soon">Soon</span>
             </button>
           </div>
+          <p className="timer-mode__caption tertiary">
+            Skill Timer (stage splits) is a work in progress.
+          </p>
 
           {scramble ? (
             mode === "skill" ? (

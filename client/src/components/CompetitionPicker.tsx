@@ -219,23 +219,29 @@ export function CompetitionPicker({
         </p>
       </div>
 
-      <input
-        ref={inputRef}
-        className="input"
-        placeholder="Search all competitions…"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        spellCheck={false}
-      />
+      {user ? (
+        <input
+          ref={inputRef}
+          className="input"
+          placeholder="Search all competitions…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          spellCheck={false}
+        />
+      ) : (
+        <p className="picker__plan-note tertiary">
+          Sign in to search the full WCA library.
+        </p>
+      )}
 
-      {showingFeatured && (
+      {user && showingFeatured && (
         <p className="picker__plan-note tertiary">
           Featured competitions are free. The full library of past WCA
           competitions comes with Pro.
         </p>
       )}
 
-      {showingFeatured ? (
+      {!user || showingFeatured ? (
         featuredCards
       ) : (
       <div className="picker__list card">

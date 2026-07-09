@@ -410,6 +410,10 @@ function EventChooser({
         })}
       </div>
 
+      <p className="picker__plan-note tertiary">
+        Blindfolded and Fewest Moves events aren't supported yet.
+      </p>
+
       {loading && (
         <div className="state-center">
           <div className="spinner" />

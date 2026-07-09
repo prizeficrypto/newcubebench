@@ -1357,6 +1357,53 @@
   border-radius: 999px;
 }
 
+.timer-mode__btn:disabled {
+  cursor: not-allowed;
+  color: var(--text-tertiary);
+}
+
+.timer-mode__soon {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  background: var(--accent-soft);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.timer-mode__caption {
+  text-align: center;
+  margin: 0 auto 16px;
+  font-size: 13px;
+}
+
+/* practice-timer puzzle selector */
+.timer-puzzle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.timer-puzzle__label {
+  font-size: 13px;
+}
+
+.timer-puzzle__select {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
 /* session time graph */
 .timegraph {
   margin-top: 18px;
@@ -2728,6 +2775,79 @@
   color: var(--text);
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent-soft);
+}
+
+/* "Your plan" card — shown to Pro users (promo month or Stripe sub) */
+.pricing__plan {
+  padding: 26px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pricing__plan .why__label {
+  margin-bottom: 6px;
+}
+
+.pricing__plan-name {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--text);
+}
+
+.pricing__plan .plan__cta-wrap {
+  margin-top: 8px;
+}
+
+/* "first 100" free-month incentive banner */
+.pricing__promo {
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+
+.pricing__promo .why__label {
+  margin-bottom: 2px;
+}
+
+.pricing__promo-copy {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.pricing__promo-copy strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.pricing__promo-cta {
+  width: fit-content;
+}
+
+/* Pro feature that isn't live yet — muted, with a "coming soon" tag */
+.plan__feature--soon {
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan__soon {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  background: var(--accent-soft);
+  padding: 1px 6px;
+  border-radius: 999px;
 }
 
 /* one shared surface with a hairline divider — hierarchy comes from the

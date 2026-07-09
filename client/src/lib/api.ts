@@ -147,6 +147,11 @@ export function getWcaPerson(wcaId: string): Promise<WcaPerson> {
   return getJson(`/api/wca/person/${encodeURIComponent(wcaId)}`);
 }
 
+/** Live counter of the free "first 100" Pro-month spots. Public — no auth. */
+export function getPromo(): Promise<{ cap: number; claimed: number; remaining: number }> {
+  return getJson(`/api/promo`);
+}
+
 export async function submitEarlyAccess(email: string): Promise<void> {
   const res = await fetch("/api/early-access", {
     method: "POST",

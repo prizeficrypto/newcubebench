@@ -22,6 +22,8 @@ export type User = {
   name: string;
   /** true while trialing or subscribed */
   pro: boolean;
+  /** epoch ms — when set and in the future, they're on the free "first 100" month */
+  promoUntil?: number;
   profile: {
     displayName?: string;
     avg333?: string;
