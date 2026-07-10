@@ -6,15 +6,22 @@ import { useT } from "../lib/i18n.tsx";
 /**
  * Solve timer. Two shapes, picked by the `inspection` prop:
  *
- *   practice (inspection off) — idle → press to start → press to stop.
+ *   practice (inspection off) — idle → hold to start → release → press to stop.
  *   competition (inspection on) — idle → press to start 15s WCA inspection →
- *     press to start the solve → press to stop. The judge's "8 seconds" and
- *     "12 seconds" calls show as the count passes those marks; starting the
- *     solve after 15s adds a +2 penalty (kept simple: no 17s DNF tier).
+ *     hold to arm → release to start the solve → press to stop. The judge's
+ *     "8 seconds" and "12 seconds" calls show as the count passes those marks;
+ *     starting the solve after 15s adds a +2 penalty (no 17s DNF tier).
+ *
+ * Starting a solve uses the real speedcubing hold-to-start feel: hold the
+ * spacebar (or the screen) and the time turns red, then green once it is armed;
+ * release while green to start. Releasing before it arms cancels back.
  */
 type Phase = "idle" | "inspecting" | "running" | "done";
+type Hold = "none" | "holding" | "armed";
 
 const INSPECTION_MS = 15_000;
+/** how long the spacebar/screen must be held before the timer arms */
+const HOLD_TO_ARM_MS = 450;
 
 export function CompTimer({
   scramble,
@@ -40,6 +47,7 @@ export function CompTimer({
   const [inspElapsed, setInspElapsed] = useState(0);
   const [result, setResult] = useState<Attempt | null>(null);
   const [touch] = useState(isTouchDevice);
+  const [hold, setHold] = useState<Hold>("none");
 
   const solveStartRef = useRef<number | null>(null);
   const inspectionStartRef = useRef<number | null>(null);
@@ -49,9 +57,18 @@ export function CompTimer({
   /** when the solve was stopped — guards the stop key/tap from immediately
    *  activating the autofocused "Next solve" button */
   const stoppedAtRef = useRef(0);
+  /** timer that flips a hold from "holding" to "armed" after HOLD_TO_ARM_MS */
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
+  /** authoritative hold value, written imperatively so a fast keydown+keyup in
+   *  one tick reads the true state (render-synced refs would be stale here) */
+  const holdRef = useRef<Hold>("none");
+  const setHoldState = useCallback((h: Hold) => {
+    holdRef.current = h;
+    setHold(h);
+  }, []);
 
   const stopRaf = () => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -61,18 +78,24 @@ export function CompTimer({
     if (inspTimerRef.current !== null) clearInterval(inspTimerRef.current);
     inspTimerRef.current = null;
   };
+  const clearHoldTimer = () => {
+    if (holdTimerRef.current !== null) clearTimeout(holdTimerRef.current);
+    holdTimerRef.current = null;
+  };
 
   const resetSolve = useCallback(() => {
     stopRaf();
     stopInspTimer();
+    clearHoldTimer();
     setPhase("idle");
     setElapsed(0);
     setInspElapsed(0);
     setResult(null);
+    setHoldState("none");
     solveStartRef.current = null;
     inspectionStartRef.current = null;
     penaltyRef.current = false;
-  }, []);
+  }, [setHoldState]);
 
   // Full reset when the scramble/solve changes.
   useEffect(() => {
@@ -102,6 +125,8 @@ export function CompTimer({
 
   const startSolve = useCallback(() => {
     stopInspTimer();
+    clearHoldTimer();
+    setHoldState("none");
     // Penalty decided at the exact moment the solve starts.
     const now = performance.now();
     penaltyRef.current =
@@ -113,6 +138,22 @@ export function CompTimer({
     setPhase("running");
     rafRef.current = requestAnimationFrame(tick);
   }, [inspection, tick]);
+
+  // Begin holding (spacebar down / finger on screen) while idle-practice or
+  // inspecting. Arms after HOLD_TO_ARM_MS; releasing armed starts the solve.
+  const beginHold = useCallback(() => {
+    if (holdRef.current !== "none") return;
+    setHoldState("holding");
+    clearHoldTimer();
+    holdTimerRef.current = setTimeout(() => setHoldState("armed"), HOLD_TO_ARM_MS);
+  }, [setHoldState]);
+
+  const releaseHold = useCallback(() => {
+    if (holdRef.current === "none") return;
+    clearHoldTimer();
+    if (holdRef.current === "armed") startSolve();
+    else setHoldState("none"); // released too early — cancel back
+  }, [startSolve, setHoldState]);
 
   const stopSolve = useCallback(() => {
     const start = solveStartRef.current;
@@ -126,13 +167,10 @@ export function CompTimer({
     setPhase("done");
   }, []);
 
-  // Advance one step in the machine from a "press" (space or tap).
-  const press = useCallback(() => {
-    const p = phaseRef.current;
-    if (p === "idle") inspection ? startInspection() : startSolve();
-    else if (p === "inspecting") startSolve();
-    else if (p === "running") stopSolve();
-  }, [inspection, startInspection, startSolve, stopSolve]);
+  // A discrete press (space tap / screen tap) that is NOT a hold: it only
+  // starts inspection or stops a running solve. Starting a solve always goes
+  // through the hold-to-arm path instead.
+  const isSpace = (e: KeyboardEvent) => e.code === "Space" || e.key === " ";
 
   // ---- keyboard ----
   useEffect(() => {
@@ -150,27 +188,46 @@ export function CompTimer({
         }
         return;
       }
-      // idle / inspecting: space advances
-      if (e.code !== "Space" && e.key !== " ") return;
+      if (!isSpace(e)) return;
       e.preventDefault();
-      if (e.repeat) return;
-      press();
+      if (e.repeat) return; // one keydown per physical press; holding is fine
+      // idle + inspection: tap starts the inspection countdown.
+      if (p === "idle" && inspection) startInspection();
+      // idle-practice or inspecting: begin the hold-to-arm.
+      else beginHold();
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (!isSpace(e)) return;
+      if (holdRef.current !== "none") {
+        e.preventDefault();
+        releaseHold();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [press, stopSolve]);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [inspection, startInspection, beginHold, releaseHold, stopSolve]);
 
   // ---- touch / pointer on the timer zone ----
-  // Advance fires on release; stop fires on press, so the stop tap's release
-  // can't land on the Next button that appears afterward.
+  // Stop fires on press so the stop tap's release can't land on the Next
+  // button that appears afterward; starting a solve is hold (down) → release.
+  const onZonePointerDown = useCallback(() => {
+    const p = phaseRef.current;
+    if (p === "running") stopSolve();
+    else if (p === "inspecting" || (p === "idle" && !inspection)) beginHold();
+  }, [inspection, beginHold, stopSolve]);
+
   const onZonePointerUp = useCallback(() => {
     const p = phaseRef.current;
-    if (p === "idle" || p === "inspecting") press();
-  }, [press]);
-
-  const onZonePointerDown = useCallback(() => {
-    if (phaseRef.current === "running") stopSolve();
-  }, [stopSolve]);
+    if (p === "idle" && inspection) {
+      startInspection();
+      return;
+    }
+    if (holdRef.current !== "none") releaseHold();
+  }, [inspection, startInspection, releaseHold]);
 
   // ---- render ----
   const isLast = solveIndex === totalSolves - 1;
@@ -178,6 +235,9 @@ export function CompTimer({
   const inspLeft = Math.max(0, Math.ceil((INSPECTION_MS - inspElapsed) / 1000));
   const call =
     inspElapsed >= 12_000 ? t("12 seconds") : inspElapsed >= 8_000 ? t("8 seconds") : "";
+  const holdCls =
+    hold === "armed" ? " is-armed" : hold === "holding" ? " is-holding" : "";
+  const holdHint = hold === "armed" ? t("Release to start") : t("Keep holding");
 
   return (
     <div className="solve">
@@ -197,31 +257,41 @@ export function CompTimer({
       >
         {phase === "idle" && (
           <div className="timer">
-            <div className="timer__time mono">0.00</div>
+            <div className={`timer__time mono${holdCls}`}>0.00</div>
             <div className="timer__hint" role="status" aria-live="polite">
-              {inspection
-                ? touch
-                  ? t("Tap to start inspection.")
-                  : t("Press space to start inspection.")
-                : touch
-                  ? t("Tap the screen to start. Tap again to stop.")
-                  : t("Press space to start. Press any key to stop.")}
+              {hold !== "none"
+                ? holdHint
+                : inspection
+                  ? touch
+                    ? t("Tap to start inspection.")
+                    : t("Press space to start inspection.")
+                  : touch
+                    ? t("Hold the screen, release to start. Tap to stop.")
+                    : t("Hold space, release to start. Any key to stop.")}
             </div>
           </div>
         )}
 
         {phase === "inspecting" && (
           <div className="timer">
-            <div className={`timer__time mono inspect${over ? " is-over" : ""}`}>
+            <div
+              className={`timer__time mono inspect${over ? " is-over" : ""}${holdCls}`}
+            >
               {over ? "+2" : inspLeft}
             </div>
             <div className="timer__hint" role="status" aria-live="polite">
-              {call && <span className="inspect__call">{call}</span>}
-              {over
-                ? t("Over 15 seconds. This solve is +2. Start when ready.")
-                : touch
-                  ? t("Inspecting. Tap to start your solve.")
-                  : t("Inspecting. Press space to start your solve.")}
+              {hold !== "none" ? (
+                holdHint
+              ) : (
+                <>
+                  {call && <span className="inspect__call">{call}</span>}
+                  {over
+                    ? t("Over 15 seconds. This solve is +2. Start when ready.")
+                    : touch
+                      ? t("Inspecting. Hold, release to start your solve.")
+                      : t("Inspecting. Hold space, release to start your solve.")}
+                </>
+              )}
             </div>
           </div>
         )}
