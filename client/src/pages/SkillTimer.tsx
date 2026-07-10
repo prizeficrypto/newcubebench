@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { CompTimer } from "../components/CompTimer.tsx";
 import { SolveTimer } from "../components/SolveTimer.tsx";
 import { StackmatTimer } from "../components/StackmatTimer.tsx";
-import { PRACTICE_EVENT_IDS, randomScramble } from "../lib/scrambles.ts";
+import { PRACTICE_EVENT_IDS, wcaScramble, prefetchScrambles } from "../lib/scrambles.ts";
 import { eventOrDefault } from "../lib/events.ts";
 import { store } from "../lib/store.ts";
 import { useT } from "../lib/i18n.tsx";
@@ -38,7 +38,10 @@ export default function SkillTimer() {
   const [mode, setMode] = useState<Mode>("regular");
   const [input, setInput] = useState<Input>("keyboard");
   const [event, setEvent] = useState<string>("333");
-  const [scramble, setScramble] = useState<string>(() => randomScramble("333"));
+  const [scramble, setScramble] = useState<string>("");
+  // Bumped on every scramble request so a slow (async) generation that resolves
+  // after the puzzle changed can't overwrite a newer scramble.
+  const genRef = useRef(0);
 
   // Skill Timer (stage splits) is a work in progress: its toggle is disabled
   // and the mode never switches to "skill". Only Regular is selectable.
@@ -60,7 +63,11 @@ export default function SkillTimer() {
   );
 
   const loadScramble = useCallback(() => {
-    setScramble(randomScramble(event));
+    const id = ++genRef.current;
+    setScramble(""); // show the loading state until the real scramble lands
+    wcaScramble(event).then((s) => {
+      if (genRef.current === id) setScramble(s);
+    });
   }, [event]);
 
   // Switching puzzles swaps in that puzzle's saved session, PBs, and scramble.
@@ -69,8 +76,9 @@ export default function SkillTimer() {
     setPbMs(store.getJson<number>(pbKey(event)));
     setPbAo5Ms(store.getJson<number>(pbAo5Key(event)));
     setPbAo12Ms(store.getJson<number>(pbAo12Key(event)));
-    setScramble(randomScramble(event));
-  }, [event]);
+    prefetchScrambles(event);
+    loadScramble();
+  }, [event, loadScramble]);
 
   // Whenever a solve lands, capture new all-time best rolling averages. Each
   // new solve makes exactly one new 5- and 12-window "current", so checking
@@ -187,9 +195,9 @@ export default function SkillTimer() {
           </p>
 
           <p className="scramble-note tertiary">
-            {t("These are random practice scrambles, not official WCA scrambles.")}{" "}
+            {t("Official WCA random-state scrambles, generated fresh for practice.")}{" "}
             <Link to="/app" className="scramble-note__link">
-              {t("To practice real competition scrambles and simulate competitions, go here.")}
+              {t("To solve a real competition's exact scrambles and see where you'd place, go to Competitions.")}
             </Link>
           </p>
 

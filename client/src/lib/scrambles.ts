@@ -1,11 +1,14 @@
 /**
- * Practice scrambles for the standalone Timer, generated in plain JS
- * (random-move, no WASM worker). Good enough and always-works for free-form
- * practice; the Simulator uses real official WCA scrambles for benchmarking.
+ * Practice scrambles for the standalone Timer.
  *
- * Supported here: 2x2-7x7, 3x3 One-Handed (3x3 scramble), Pyraminx, Skewb,
- * Megaminx. Blindfolded, Fewest-Moves, Clock and Square-1 aren't offered in
- * the practice timer yet.
+ * Real WCA scrambles come from cubing.js (`randomScrambleForEvent`) — the same
+ * random-state generator the WCA uses (via TNoodle) for 2x2-5x5, Pyraminx,
+ * Skewb, Clock and Square-1, and constrained random moves for 6x6/7x7/Megaminx.
+ * It is loaded lazily (WASM worker) and buffered so switching solves is snappy.
+ *
+ * If generation ever fails (worker/WASM unavailable), we fall back to a
+ * dependency-free random-move scramble so the timer still works — degraded,
+ * never broken.
  */
 
 const rand = (n: number) => Math.floor(Math.random() * n);
@@ -62,7 +65,6 @@ function faceTurns(faces: string[], suffixes: readonly string[], length: number)
 
 function pyraminx(): string {
   const body = faceTurns(["U", "L", "R", "B"], QUARTER, 8);
-  // Random tips (each corner may or may not be turned).
   const tips = ["u", "l", "r", "b"]
     .filter(() => Math.random() < 0.6)
     .map((t) => t + QUARTER[rand(QUARTER.length)]);
@@ -83,7 +85,29 @@ function megaminx(): string {
   return lines.join("   ");
 }
 
-/** A random-move scramble for the given event id. Falls back to 3x3. */
+function clock(): string {
+  const amt = () => {
+    const n = rand(12) - 5; // -5..6
+    return `${Math.abs(n)}${n < 0 ? "-" : "+"}`;
+  };
+  const front = ["UR", "DR", "DL", "UL", "U", "R", "D", "L", "ALL"]
+    .map((p) => `${p}${amt()}`)
+    .join(" ");
+  const back = ["U", "R", "D", "L", "ALL"].map((p) => `${p}${amt()}`).join(" ");
+  const pins = ["UR", "DR", "DL", "UL"].filter(() => Math.random() < 0.5);
+  return `${front} y2 ${back}${pins.length ? " " + pins.join(" ") : ""}`;
+}
+
+function square1(): string {
+  const parts: string[] = [];
+  const n = 12 + rand(6);
+  for (let i = 0; i < n; i++) {
+    parts.push(`(${rand(13) - 6},${rand(13) - 6})`);
+  }
+  return parts.join("/");
+}
+
+/** A dependency-free random-move scramble — the fallback for each event. */
 export function randomScramble(eventId: string): string {
   switch (eventId) {
     case "222":
@@ -105,9 +129,93 @@ export function randomScramble(eventId: string): string {
       return faceTurns(["U", "R", "L", "B"], QUARTER, 9);
     case "minx":
       return megaminx();
+    case "clock":
+      return clock();
+    case "sq1":
+      return square1();
     default:
       return nxn(A3, 20);
   }
+}
+
+// ---- real WCA scrambles (cubing.js), lazy-loaded and buffered ----
+
+/** Our event ids → cubing.js event ids. */
+const CUBING_EVENT: Record<string, string> = {
+  "333": "333",
+  "222": "222",
+  "444": "444",
+  "555": "555",
+  "666": "666",
+  "777": "777",
+  "333oh": "333",
+  pyram: "pyram",
+  skewb: "skewb",
+  minx: "minx",
+  clock: "clock",
+  sq1: "sq1",
+};
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error("scramble timeout")), ms);
+    p.then(
+      (v) => {
+        clearTimeout(id);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(id);
+        reject(e);
+      },
+    );
+  });
+}
+
+/** Generate one real WCA scramble; fall back to random moves on any failure. */
+async function generateOne(eventId: string): Promise<string> {
+  const cubingId = CUBING_EVENT[eventId] ?? "333";
+  try {
+    const { randomScrambleForEvent } = await import("cubing/scramble");
+    const alg = await withTimeout(randomScrambleForEvent(cubingId), 15_000);
+    const scramble = alg.toString().trim();
+    if (!scramble) throw new Error("empty scramble");
+    return scramble;
+  } catch {
+    return randomScramble(eventId);
+  }
+}
+
+const QUEUE: Record<string, string[]> = {};
+const FILLING: Record<string, boolean> = {};
+const MAX_QUEUE = 2;
+
+/** Keep each event's buffer topped up in the background. */
+function refill(eventId: string): void {
+  const q = (QUEUE[eventId] ??= []);
+  if (q.length >= MAX_QUEUE || FILLING[eventId]) return;
+  FILLING[eventId] = true;
+  generateOne(eventId)
+    .then((s) => {
+      (QUEUE[eventId] ??= []).push(s);
+    })
+    .finally(() => {
+      FILLING[eventId] = false;
+      refill(eventId);
+    });
+}
+
+/** Next real WCA scramble for an event. Uses the buffer when warm. */
+export async function wcaScramble(eventId: string): Promise<string> {
+  const q = (QUEUE[eventId] ??= []);
+  const next = q.shift();
+  refill(eventId);
+  return next ?? generateOne(eventId);
+}
+
+/** Warm an event's buffer (call on mount and when switching puzzles). */
+export function prefetchScrambles(eventId: string): void {
+  refill(eventId);
 }
 
 /** Event ids the practice timer can generate scrambles for. */
@@ -122,24 +230,6 @@ export const PRACTICE_EVENT_IDS = [
   "pyram",
   "skewb",
   "minx",
+  "clock",
+  "sq1",
 ] as const;
-
-// ---- backward-compatible 3x3 helpers (still used by the current Timer) ----
-
-const queue: string[] = [];
-
-function topUp(): void {
-  if (queue.length === 0) queue.push(randomScramble("333"));
-}
-
-/** Next 3x3 scramble (async to keep the existing call site's contract). */
-export async function nextScramble(): Promise<string> {
-  const next = queue.shift() ?? randomScramble("333");
-  topUp();
-  return next;
-}
-
-/** Prime the buffer (call on page mount). */
-export function warmUp(): void {
-  topUp();
-}
