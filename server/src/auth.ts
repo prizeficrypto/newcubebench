@@ -55,9 +55,13 @@ export type User = {
   promoUntil?: number;
 };
 
-/** How many of the first-100 free-month spots exist. */
-export const PROMO_CAP = 100;
-const PROMO_MS = 30 * 24 * 60 * 60 * 1000; // one free month
+/**
+ * Launch promo: anyone who signs up before PROMO_END gets Pro free (no cap).
+ * The grant lasts a generous stretch so it reads as "completely free" rather
+ * than a short trial.
+ */
+export const PROMO_END_MS = Date.parse("2026-08-10T00:00:00Z"); // ~one month
+const PROMO_GRANT_MS = 365 * 24 * 60 * 60 * 1000; // a free year for launch signups
 
 /** A user is Pro via the free promo month, an active/trialing sub, or a
  *  canceled-but-still-paid period. */
@@ -153,31 +157,33 @@ function rowToUser(row: UserRow): User {
   };
 }
 
-/** Free-month promo status: how many spots are claimed / left. */
+/** Launch-promo status: is the free window still open, when does it end, and
+ *  how many have claimed it so far. */
 export async function promoStatus(): Promise<{
-  cap: number;
+  active: boolean;
+  endsAt: number;
   claimed: number;
-  remaining: number;
 }> {
   const rows = await sql<{ n: number }[]>`
     select count(*)::int as n from users where promo_until is not null
   `;
-  const claimed = rows[0]?.n ?? 0;
-  return { cap: PROMO_CAP, claimed, remaining: Math.max(0, PROMO_CAP - claimed) };
+  return {
+    active: Date.now() < PROMO_END_MS,
+    endsAt: PROMO_END_MS,
+    claimed: rows[0]?.n ?? 0,
+  };
 }
 
 /**
- * Grant the free month to a brand-new user, but only while spots remain. The
- * cap is enforced inside a single conditional UPDATE so concurrent signups
- * can't blow far past 100. Returns the promo expiry if granted.
+ * Grant free Pro to a brand-new user as long as the promo window is open.
+ * No cap: anyone who signs up before PROMO_END gets it. Returns the expiry.
  */
 async function grantPromoIfAvailable(userId: string): Promise<number | null> {
-  const until = Date.now() + PROMO_MS;
+  if (Date.now() >= PROMO_END_MS) return null; // window closed
+  const until = Date.now() + PROMO_GRANT_MS;
   const rows = await sql<{ promo_until: string | number }[]>`
     update users set promo_until = ${until}
-    where id = ${userId}
-      and promo_until is null
-      and (select count(*) from users where promo_until is not null) < ${PROMO_CAP}
+    where id = ${userId} and promo_until is null
     returning promo_until
   `;
   return rows[0] ? Number(rows[0].promo_until) : null;

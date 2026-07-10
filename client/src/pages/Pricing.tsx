@@ -237,13 +237,15 @@ function ManageSubscription({ openPortal }: { openPortal: () => Promise<void> })
  */
 function PromoBanner({ isGuest }: { isGuest: boolean }) {
   const { t } = useT();
-  const [remaining, setRemaining] = useState<number | null>(null);
+  const [promo, setPromo] = useState<{ active: boolean; endsAt: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
     getPromo()
       .then((p) => {
-        if (!cancelled) setRemaining(p.remaining);
+        if (!cancelled) setPromo({ active: p.active, endsAt: p.endsAt });
       })
       .catch(() => {
         /* the promo banner is a bonus; a failure just hides it */
@@ -253,14 +255,22 @@ function PromoBanner({ isGuest }: { isGuest: boolean }) {
     };
   }, []);
 
-  if (remaining === null || remaining <= 0) return null;
+  if (!promo || !promo.active) return null;
+
+  const until = new Date(promo.endsAt).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
   return (
     <div className="card pricing__promo">
-      <span className="why__label why__label--accent">{t("Free for the first 100")}</span>
+      <span className="why__label why__label--accent">{t("Launch offer")}</span>
       <p className="pricing__promo-copy">
-        {t("First 100 sign-ups get Cube Bench Pro free for a month. No card.")}{" "}
-        <strong>{remaining} of 100 spots left.</strong>
+        {t("Everyone who signs up now gets Cube Bench Pro completely free. No card.")}{" "}
+        <strong>
+          {t("Free through {date}.").replace("{date}", until)}
+        </strong>
       </p>
       {isGuest && (
         <Link className="btn plan__cta pricing__promo-cta" to="/join">

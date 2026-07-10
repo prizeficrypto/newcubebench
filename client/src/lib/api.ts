@@ -157,7 +157,11 @@ export function getWcaPerson(wcaId: string): Promise<WcaPerson> {
 }
 
 /** Live counter of the free "first 100" Pro-month spots. Public — no auth. */
-export function getPromo(): Promise<{ cap: number; claimed: number; remaining: number }> {
+export function getPromo(): Promise<{
+  active: boolean;
+  endsAt: number;
+  claimed: number;
+}> {
   return getJson(`/api/promo`);
 }
 
