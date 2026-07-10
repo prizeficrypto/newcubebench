@@ -9,6 +9,12 @@ import react from "@vitejs/plugin-react";
 // Vite serves its native ESM directly. Build target raised to es2022 to match.
 export default defineConfig({
   plugins: [react()],
+  // Force a single React instance so packages with their own React dep (e.g.
+  // @vercel/analytics) don't get a second copy through the dep optimizer,
+  // which otherwise triggers "invalid hook call" errors.
+  resolve: {
+    dedupe: ["react", "react-dom"],
+  },
   optimizeDeps: {
     exclude: ["cubing"],
   },

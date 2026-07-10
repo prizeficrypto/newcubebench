@@ -7,6 +7,7 @@ import {
   Routes,
   useNavigate,
 } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider, useAuth } from "./lib/auth.tsx";
 import { LanguageProvider } from "./lib/i18n.tsx";
 import { NavBar } from "./components/NavBar.tsx";
@@ -62,6 +63,7 @@ export default function App() {
 
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <Analytics />
       </BrowserRouter>
       </LanguageProvider>
     </AuthProvider>
