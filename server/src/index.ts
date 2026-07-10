@@ -250,11 +250,19 @@ app.get(
       res.status(400).json({ error: `Unknown round type "${roundTypeId}".` });
       return;
     }
+    // Scramble group (A/B/C…). Validated shape only; an unknown group falls
+    // back to the round's default inside getEventRoundScrambles.
+    const group =
+      typeof req.query.group === "string" && /^[A-Z]$/.test(req.query.group)
+        ? req.query.group
+        : undefined;
     const [comp, round] = await Promise.all([
       withCache(`comp:${id}`, TTL.SHORT_MS, () => getCompetition(id)),
-      // Scrambles are immutable once generated -> cache long, per (event, round).
-      withCache(`round:${id}:${event}:${roundTypeId ?? "first"}`, TTL.LONG_MS, () =>
-        getEventRoundScrambles(id, event, roundTypeId),
+      // Scrambles are immutable once generated -> cache long, per (event, round, group).
+      withCache(
+        `round:${id}:${event}:${roundTypeId ?? "first"}:${group ?? "def"}`,
+        TTL.LONG_MS,
+        () => getEventRoundScrambles(id, event, roundTypeId, group),
       ),
     ]);
     res.json({ competition: comp, event, round });

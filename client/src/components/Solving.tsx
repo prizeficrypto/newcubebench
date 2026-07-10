@@ -31,6 +31,8 @@ export function Solving({
   roundName,
   attempts,
   onAttempt,
+  onChangeGroup,
+  groupBusy = false,
   onBack,
 }: {
   comp: Competition;
@@ -40,6 +42,8 @@ export function Solving({
   roundName?: string;
   attempts: Attempt[];
   onAttempt: (attempt: Attempt) => void;
+  onChangeGroup?: (groupId: string) => void;
+  groupBusy?: boolean;
   onBack: () => void;
 }) {
   const { t } = useT();
@@ -91,6 +95,25 @@ export function Solving({
       <p className="timer-mode__caption tertiary">
         {t("Skill Timer (stage splits) is a work in progress.")}
       </p>
+
+      {round.groups && round.groups.length > 1 && (
+        <div className="group-pick" role="group" aria-label={t("Scramble group")}>
+          <span className="group-pick__label tertiary">{t("Group")}</span>
+          <div className="group-pick__opts">
+            {round.groups.map((g) => (
+              <button
+                key={g}
+                className={`group-pick__btn${g === round.groupId ? " is-active" : ""}`}
+                aria-pressed={g === round.groupId}
+                disabled={groupBusy}
+                onClick={() => onChangeGroup?.(g)}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <CompTimer
         key={index}

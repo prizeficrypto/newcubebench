@@ -16,6 +16,8 @@ export type RoundScrambleSet = {
   roundTypeId?: string;
   roundName?: string;
   groupId?: string;
+  /** groups the user can pick from for this round (each format-complete) */
+  groups?: string[];
   scrambles?: string[];
 };
 
@@ -109,14 +111,19 @@ export function getRounds(
   );
 }
 
-/** One round's scrambles. Omit roundTypeId for the first round. Defaults to 3x3. */
+/**
+ * One round's scrambles. Omit roundTypeId for the first round. Optionally pick
+ * a scramble group (A/B/C…); omit for the round's default group. Defaults to 3x3.
+ */
 export function getRound(
   id: string,
   roundTypeId?: string,
   event = "333",
+  group?: string,
 ): Promise<{ competition: Competition; event: string; round: RoundScrambleSet }> {
   const params = new URLSearchParams({ event });
   if (roundTypeId) params.set("roundTypeId", roundTypeId);
+  if (group) params.set("group", group);
   return getJson(
     `/api/competitions/${encodeURIComponent(id)}/round?${params.toString()}`,
   );

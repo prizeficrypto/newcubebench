@@ -59,6 +59,7 @@ export default function Simulator() {
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [roundError, setRoundError] = useState<string | null>(null);
+  const [groupBusy, setGroupBusy] = useState(false);
   const requiredAttempts = event.solves;
   // advancing to a round the user just qualified for
   const [advanceTo, setAdvanceTo] = useState<{
@@ -182,6 +183,39 @@ export default function Simulator() {
       setEventsError(
         err instanceof Error ? err.message : "Couldn't load that event.",
       );
+    }
+  }
+
+  // Switch to a different scramble group of the current round. Groups hold
+  // different scrambles, so the attempts so far can't carry over — switching
+  // clears them (with a confirm once any solve is in).
+  async function changeGroup(groupId: string) {
+    if (!comp || !round?.roundTypeId || groupBusy) return;
+    if (groupId === round.groupId) return;
+    if (
+      attempts.length > 0 &&
+      !window.confirm(
+        `${t("Switch to Group")} ${groupId}? ${attempts.length} ${attempts.length === 1 ? t("solve will be cleared.") : t("solves will be cleared.")}`,
+      )
+    ) {
+      return;
+    }
+    setGroupBusy(true);
+    setRoundError(null);
+    try {
+      const { round: r } = await getRound(comp.id, round.roundTypeId, event.id, groupId);
+      if (r.available && r.scrambles && r.scrambles.length >= event.solves) {
+        setRound(r);
+        setAttempts([]);
+        store.remove(ROUND_KEY);
+        setSaved(null);
+      } else {
+        setRoundError(r.reason ?? "That group isn't available.");
+      }
+    } catch (err) {
+      setRoundError(err instanceof Error ? err.message : "Couldn't load that group.");
+    } finally {
+      setGroupBusy(false);
     }
   }
 
@@ -324,6 +358,8 @@ export default function Simulator() {
           roundName={round.roundName}
           attempts={attempts}
           onAttempt={handleAttempt}
+          onChangeGroup={changeGroup}
+          groupBusy={groupBusy}
           onBack={leaveRound}
         />
       )}

@@ -184,17 +184,25 @@ export type RoundScrambleSet = {
   roundTypeId?: string;
   roundName?: string;
   groupId?: string;
+  /** group ids the user can choose from for this round (each format-complete) */
+  groups?: string[];
   /** ordered by scramble_num, is_extra excluded */
   scrambles?: string[];
 };
 
-/** One solvable round of a competition (Group A, ordered, format-complete). */
+/** One solvable round of a competition (ordered, format-complete per group). */
 export type Round = {
   roundTypeId: string;
   roundName: string;
   order: number;
+  /** default group (A when present, else the first) */
   groupId: string;
+  /** every group with a full scramble set for this round, sorted */
+  groups: string[];
+  /** default group's scrambles (kept for callers that don't pick a group) */
   scrambles: string[];
+  /** scrambles for each qualifying group, keyed by group id */
+  scramblesByGroup: Record<string, string[]>;
 };
 
 export type Rounds = {
@@ -253,21 +261,29 @@ export async function getEventRounds(
   const need = minScrambles(eventId);
   const rounds: Round[] = [];
   for (const [code, roundScrambles] of byRound) {
-    // Prefer Group "A"; otherwise the first group present.
-    const groups = [...new Set(roundScrambles.map((s) => s.group_id))].sort();
+    // Build every group's ordered scramble set; keep only the groups that have
+    // a full solve count for the format (skips cutoff/partial/extra-only sets).
+    const scramblesByGroup: Record<string, string[]> = {};
+    const allGroups = [...new Set(roundScrambles.map((s) => s.group_id))].sort();
+    for (const g of allGroups) {
+      const scr = roundScrambles
+        .filter((s) => s.group_id === g && !s.is_extra)
+        .sort((a, b) => a.scramble_num - b.scramble_num)
+        .map((s) => s.scramble);
+      if (scr.length >= need) scramblesByGroup[g] = scr;
+    }
+    const groups = Object.keys(scramblesByGroup).sort();
+    if (groups.length === 0) continue;
+    // Default to Group "A" when present, otherwise the first group.
     const groupId = groups.includes("A") ? "A" : groups[0];
-    const scrambles = roundScrambles
-      .filter((s) => s.group_id === groupId && !s.is_extra)
-      .sort((a, b) => a.scramble_num - b.scramble_num)
-      .map((s) => s.scramble);
-    // Skip cutoff/partial rounds that lack a full solve set for the format.
-    if (scrambles.length < need) continue;
     rounds.push({
       roundTypeId: code,
       roundName: roundName(code),
       order: roundOrder(code),
       groupId,
-      scrambles,
+      groups,
+      scrambles: scramblesByGroup[groupId],
+      scramblesByGroup,
     });
   }
 
@@ -283,11 +299,15 @@ export async function getEventRounds(
   return { available: true, rounds };
 }
 
-/** One round's scramble set. `roundTypeId` omitted → the first round. */
+/**
+ * One round's scramble set. `roundTypeId` omitted → the first round.
+ * `groupId` omitted (or not present in this round) → the default group.
+ */
 export async function getEventRoundScrambles(
   id: string,
   eventId: string,
   roundTypeId?: string,
+  groupId?: string,
 ): Promise<RoundScrambleSet> {
   const { available, reason, rounds } = await getEventRounds(id, eventId);
   if (!available) return { available: false, reason };
@@ -297,12 +317,15 @@ export async function getEventRoundScrambles(
   if (!round) {
     return { available: false, reason: "That round isn't available." };
   }
+  const gid =
+    groupId && round.scramblesByGroup[groupId] ? groupId : round.groupId;
   return {
     available: true,
     roundTypeId: round.roundTypeId,
     roundName: round.roundName,
-    groupId: round.groupId,
-    scrambles: round.scrambles,
+    groupId: gid,
+    groups: round.groups,
+    scrambles: round.scramblesByGroup[gid],
   };
 }
 

@@ -1423,6 +1423,62 @@
   font-size: 13px;
 }
 
+/* scramble-group picker (A/B/C…), shown when a round published >1 group */
+.group-pick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: 0 auto 16px;
+  max-width: 420px;
+}
+
+.group-pick__label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.group-pick__opts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.group-pick__btn {
+  min-width: 34px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    border-color var(--speed-ui) var(--ease-out),
+    color var(--speed-ui) var(--ease-out);
+}
+
+.group-pick__btn:hover:not(:disabled):not(.is-active) {
+  border-color: var(--text-tertiary);
+}
+
+.group-pick__btn.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.group-pick__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* practice-timer puzzle selector */
 .timer-puzzle {
   display: flex;
