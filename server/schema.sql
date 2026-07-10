@@ -36,6 +36,19 @@ create table if not exists early_access (
   created_at timestamptz not null default now()
 );
 
+-- Bug reports and suggestions from the in-app feedback form.
+create table if not exists feedback (
+  id         bigint generated always as identity primary key,
+  kind       text not null,                                 -- 'bug' | 'suggestion'
+  message    text not null,
+  email      text,                                          -- optional contact address
+  user_id    text references users (id) on delete set null, -- set when signed in
+  path       text,                                          -- page the user was on
+  user_agent text,
+  created_at timestamptz not null default now()
+);
+create index if not exists feedback_created_idx on feedback (created_at desc);
+
 -- Row Level Security. Our server connects with the full Postgres role, which
 -- BYPASSES RLS, so these queries are unaffected. But Supabase auto-exposes a
 -- public REST API (anon key) for public-schema tables; enabling RLS with NO

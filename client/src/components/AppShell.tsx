@@ -90,6 +90,11 @@ export function AppShell() {
       <main className="app">
         <Outlet />
       </main>
+      <footer className="app-foot">
+        <NavLink to="/app/feedback" className="app-foot__link">
+          {t("Report a bug or suggest something")}
+        </NavLink>
+      </footer>
     </>
   );
 }

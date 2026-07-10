@@ -172,6 +172,29 @@ export function getPromo(): Promise<{
   return getJson(`/api/promo`);
 }
 
+/** Send a bug report or suggestion. Works for guests; auth attaches the user. */
+export async function submitFeedback(input: {
+  kind: "bug" | "suggestion";
+  message: string;
+  email?: string;
+}): Promise<void> {
+  const res = await fetch("/api/feedback", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ ...input, path: window.location.pathname }),
+  });
+  if (!res.ok) {
+    let detail = "Something went wrong — please try again.";
+    try {
+      const body = await res.json();
+      if (body?.error) detail = body.error;
+    } catch {
+      /* non-JSON error body */
+    }
+    throw new Error(detail);
+  }
+}
+
 export async function submitEarlyAccess(email: string): Promise<void> {
   const res = await fetch("/api/early-access", {
     method: "POST",

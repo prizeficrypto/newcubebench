@@ -509,6 +509,57 @@ app.post(
   }),
 );
 
+// In-app feedback: bug reports and suggestions. Open to guests (an account is
+// not required to tell us something's broken). All fields are bounded and the
+// contact email is optional; the signed-in user is attached when present.
+const FEEDBACK_MIN_LEN = 3;
+const FEEDBACK_MAX_LEN = 4000;
+
+app.post(
+  "/api/feedback",
+  captureLimiter,
+  wrap(async (req, res) => {
+    const kindRaw = typeof req.body?.kind === "string" ? req.body.kind : "";
+    const kind = kindRaw === "bug" || kindRaw === "suggestion" ? kindRaw : "";
+    if (!kind) {
+      res.status(400).json({ error: "Choose whether this is a bug or a suggestion." });
+      return;
+    }
+    const message =
+      typeof req.body?.message === "string" ? req.body.message.trim() : "";
+    if (message.length < FEEDBACK_MIN_LEN) {
+      res.status(400).json({ error: "Please add a little more detail." });
+      return;
+    }
+    const emailRaw =
+      typeof req.body?.email === "string"
+        ? req.body.email.trim().toLowerCase()
+        : "";
+    const email =
+      emailRaw && emailRaw.length <= EMAIL_MAX_LEN && EMAIL_SHAPE.test(emailRaw)
+        ? emailRaw
+        : null;
+    const path =
+      typeof req.body?.path === "string" ? req.body.path.slice(0, 300) : null;
+    const userAgent = String(req.headers["user-agent"] ?? "").slice(0, 400);
+    // Attach the account if the request is authenticated; guests stay null.
+    const user = await userForToken(bearerToken(req));
+
+    await sql`
+      insert into feedback (kind, message, email, user_id, path, user_agent)
+      values (
+        ${kind},
+        ${message.slice(0, FEEDBACK_MAX_LEN)},
+        ${email},
+        ${user?.id ?? null},
+        ${path},
+        ${userAgent}
+      )
+    `;
+    res.json({ status: "ok" });
+  }),
+);
+
 // ---- Serve the built client (production single-service deploy) ----
 // In dev this folder doesn't exist and Vite serves the client instead, so
 // this block is a no-op locally. API/health routes are registered above, so

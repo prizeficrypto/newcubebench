@@ -19,6 +19,7 @@ import Simulator from "./pages/Simulator.tsx";
 import SkillTimer from "./pages/SkillTimer.tsx";
 import Pricing from "./pages/Pricing.tsx";
 import Settings from "./pages/Settings.tsx";
+import Feedback from "./pages/Feedback.tsx";
 
 /**
  * Two worlds:
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="skill-timer" element={<SkillTimer />} />
             <Route path="pricing" element={<Pricing />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="feedback" element={<Feedback />} />
           </Route>
 
           {/* legacy paths from the tabbed layout */}
