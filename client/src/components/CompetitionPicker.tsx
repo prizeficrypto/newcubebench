@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   getEvents,
   getHighlight,
@@ -321,9 +321,19 @@ export function CompetitionPicker({
 
       {!user ? (
         <>
-          <p className="picker__plan-note tertiary">
-            {t("Sign in to browse the full WCA library.")}
-          </p>
+          <div className="picker__signup">
+            <div className="picker__signup-text">
+              <span className="picker__signup-title">
+                {t("These featured competitions are free to try.")}
+              </span>
+              <span className="tertiary">
+                {t("Create a free account to unlock every WCA competition, ever. No card, no cost.")}
+              </span>
+            </div>
+            <Link to="/join" className="btn picker__signup-btn">
+              {t("Sign up free")}
+            </Link>
+          </div>
           {featuredCards}
         </>
       ) : (

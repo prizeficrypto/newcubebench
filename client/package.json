@@ -16,7 +16,8 @@
     "cubing": "^0.63.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.18.1"
+    "react-router-dom": "^7.18.1",
+    "stackmat": "^1.1.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",

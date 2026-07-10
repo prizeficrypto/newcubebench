@@ -48,6 +48,30 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
     "Something went wrong. Please try again.":
       "Une erreur s'est produite. Veuillez réessayer.",
     "Report a bug or suggest something": "Signaler un bug ou proposer une idée",
+    "These are random practice scrambles, not official WCA scrambles.":
+      "Ce sont des mélanges d'entraînement aléatoires, pas des mélanges officiels WCA.",
+    "To practice real competition scrambles and simulate competitions, go here.":
+      "Pour vous entraîner avec de vrais mélanges de compétition et simuler des compétitions, cliquez ici.",
+    "These featured competitions are free to try.":
+      "Ces compétitions en vedette sont gratuites à essayer.",
+    "Create a free account to unlock every WCA competition, ever. No card, no cost.":
+      "Créez un compte gratuit pour débloquer toutes les compétitions WCA, sans exception. Sans carte, sans frais.",
+    "Sign up free": "Inscription gratuite",
+    "Stackmat": "Stackmat",
+    "Timer input": "Entrée du chronomètre",
+    "Keyboard": "Clavier",
+    "Requesting microphone…": "Demande d'accès au micro…",
+    "Microphone access is needed to read the Stackmat. Allow it in your browser, then try again.":
+      "L'accès au micro est nécessaire pour lire le Stackmat. Autorisez-le dans votre navigateur, puis réessayez.",
+    "Couldn't start listening. Check that your Stackmat cable is in the mic/line-in jack, then try again.":
+      "Impossible de démarrer l'écoute. Vérifiez que le câble du Stackmat est bien dans la prise micro/entrée, puis réessayez.",
+    "Plug your Stackmat into the mic/line-in jack with the audio cable, then connect. We read its signal through the microphone.":
+      "Branchez votre Stackmat sur la prise micro/entrée avec le câble audio, puis connectez. Nous lisons son signal via le microphone.",
+    "Connect Stackmat": "Connecter le Stackmat",
+    "Solving…": "Résolution…",
+    "Ready, lift your hands to start": "Prêt, levez les mains pour démarrer",
+    "Hands on the mat when you're ready. The mat runs the timer.":
+      "Mains sur le tapis quand vous êtes prêt. Le tapis gère le chronomètre.",
     "Over 15 seconds. This solve is +2. Start when ready.": "Plus de 15 secondes. Cette résolution est +2. Démarrez quand vous êtes prêt.",
     "Inspecting. Tap to start your solve.": "Inspection. Touchez pour lancer votre résolution.",
     "Inspecting. Press space to start your solve.": "Inspection. Appuyez sur espace pour lancer votre résolution.",
@@ -159,6 +183,29 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
     "Please add a little more detail.": "조금 더 자세히 적어주세요.",
     "Something went wrong. Please try again.": "문제가 발생했습니다. 다시 시도해 주세요.",
     "Report a bug or suggest something": "버그 신고 또는 제안하기",
+    "These are random practice scrambles, not official WCA scrambles.":
+      "이것은 무작위 연습 스크램블이며, 공식 WCA 스크램블이 아닙니다.",
+    "To practice real competition scrambles and simulate competitions, go here.":
+      "실제 대회 스크램블로 연습하고 대회를 시뮬레이션하려면 여기를 클릭하세요.",
+    "These featured competitions are free to try.": "추천 대회는 무료로 이용할 수 있습니다.",
+    "Create a free account to unlock every WCA competition, ever. No card, no cost.":
+      "무료 계정을 만들면 모든 WCA 대회를 이용할 수 있습니다. 카드도, 비용도 없습니다.",
+    "Sign up free": "무료 가입",
+    "Stackmat": "스택매트",
+    "Timer input": "타이머 입력",
+    "Keyboard": "키보드",
+    "Requesting microphone…": "마이크 요청 중…",
+    "Microphone access is needed to read the Stackmat. Allow it in your browser, then try again.":
+      "스택매트를 읽으려면 마이크 접근 권한이 필요합니다. 브라우저에서 허용한 후 다시 시도하세요.",
+    "Couldn't start listening. Check that your Stackmat cable is in the mic/line-in jack, then try again.":
+      "청취를 시작할 수 없습니다. 스택매트 케이블이 마이크/라인 입력 잭에 꽂혀 있는지 확인한 후 다시 시도하세요.",
+    "Plug your Stackmat into the mic/line-in jack with the audio cable, then connect. We read its signal through the microphone.":
+      "오디오 케이블로 스택매트를 마이크/라인 입력 잭에 연결한 후 연결하세요. 마이크를 통해 신호를 읽습니다.",
+    "Connect Stackmat": "스택매트 연결",
+    "Solving…": "푸는 중…",
+    "Ready, lift your hands to start": "준비 완료, 손을 떼면 시작됩니다",
+    "Hands on the mat when you're ready. The mat runs the timer.":
+      "준비되면 매트에 손을 올리세요. 매트가 타이머를 제어합니다.",
     "Over 15 seconds. This solve is +2. Start when ready.": "15초를 초과했습니다. 이 풀이는 +2입니다. 준비되면 시작하세요.",
     "Inspecting. Tap to start your solve.": "검토 중입니다. 탭하여 풀이를 시작하세요.",
     "Inspecting. Press space to start your solve.": "검토 중입니다. 스페이스바를 눌러 풀이를 시작하세요.",
@@ -270,6 +317,30 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
     "Please add a little more detail.": "Añade un poco más de detalle.",
     "Something went wrong. Please try again.": "Algo salió mal. Inténtalo de nuevo.",
     "Report a bug or suggest something": "Reportar un error o sugerir algo",
+    "These are random practice scrambles, not official WCA scrambles.":
+      "Estas son mezclas de práctica aleatorias, no mezclas oficiales de la WCA.",
+    "To practice real competition scrambles and simulate competitions, go here.":
+      "Para practicar con mezclas reales de competición y simular competiciones, haz clic aquí.",
+    "These featured competitions are free to try.":
+      "Estas competiciones destacadas son gratis para probar.",
+    "Create a free account to unlock every WCA competition, ever. No card, no cost.":
+      "Crea una cuenta gratis para desbloquear todas las competiciones de la WCA. Sin tarjeta, sin costo.",
+    "Sign up free": "Regístrate gratis",
+    "Stackmat": "Stackmat",
+    "Timer input": "Entrada del cronómetro",
+    "Keyboard": "Teclado",
+    "Requesting microphone…": "Solicitando micrófono…",
+    "Microphone access is needed to read the Stackmat. Allow it in your browser, then try again.":
+      "Se necesita acceso al micrófono para leer el Stackmat. Permítelo en tu navegador e inténtalo de nuevo.",
+    "Couldn't start listening. Check that your Stackmat cable is in the mic/line-in jack, then try again.":
+      "No se pudo empezar a escuchar. Comprueba que el cable del Stackmat esté en la entrada de micrófono e inténtalo de nuevo.",
+    "Plug your Stackmat into the mic/line-in jack with the audio cable, then connect. We read its signal through the microphone.":
+      "Conecta tu Stackmat a la entrada de micrófono con el cable de audio y luego conecta. Leemos su señal a través del micrófono.",
+    "Connect Stackmat": "Conectar Stackmat",
+    "Solving…": "Resolviendo…",
+    "Ready, lift your hands to start": "Listo, levanta las manos para empezar",
+    "Hands on the mat when you're ready. The mat runs the timer.":
+      "Manos en el tapete cuando estés listo. El tapete controla el cronómetro.",
     "Over 15 seconds. This solve is +2. Start when ready.": "Más de 15 segundos. Esta resolución es +2. Empieza cuando quieras.",
     "Inspecting. Tap to start your solve.": "Inspeccionando. Toca para iniciar tu resolución.",
     "Inspecting. Press space to start your solve.": "Inspeccionando. Pulsa espacio para iniciar tu resolución.",

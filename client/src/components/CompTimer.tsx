@@ -59,6 +59,9 @@ export function CompTimer({
   const stoppedAtRef = useRef(0);
   /** timer that flips a hold from "holding" to "armed" after HOLD_TO_ARM_MS */
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** true while the spacebar is physically down — so one hold starts per press
+   *  even if the OS drops the repeat flag, and a held key can't re-arm */
+  const spaceDownRef = useRef(false);
 
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
@@ -190,7 +193,11 @@ export function CompTimer({
       }
       if (!isSpace(e)) return;
       e.preventDefault();
-      if (e.repeat) return; // one keydown per physical press; holding is fine
+      // One hold per physical press: ignore the OS auto-repeat AND any keydown
+      // that arrives while the bar is already held. Merely holding the spacebar
+      // therefore never arms or starts — only a fresh press does.
+      if (e.repeat || spaceDownRef.current) return;
+      spaceDownRef.current = true;
       // idle + inspection: tap starts the inspection countdown.
       if (p === "idle" && inspection) startInspection();
       // idle-practice or inspecting: begin the hold-to-arm.
@@ -198,18 +205,36 @@ export function CompTimer({
     };
     const onKeyUp = (e: KeyboardEvent) => {
       if (!isSpace(e)) return;
+      spaceDownRef.current = false;
+      // Starting a solve happens here, on a deliberate release of an armed hold.
       if (holdRef.current !== "none") {
         e.preventDefault();
         releaseHold();
       }
     };
+    // Losing focus mid-hold (alt-tab, switching apps) cancels the hold rather
+    // than leaving it armed to fire on return. Never starts a solve.
+    const cancelHold = () => {
+      spaceDownRef.current = false;
+      if (holdRef.current !== "none") {
+        clearHoldTimer();
+        setHoldState("none");
+      }
+    };
+    const onVisibility = () => {
+      if (document.hidden) cancelHold();
+    };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", cancelHold);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", cancelHold);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [inspection, startInspection, beginHold, releaseHold, stopSolve]);
+  }, [inspection, startInspection, beginHold, releaseHold, stopSolve, setHoldState]);
 
   // ---- touch / pointer on the timer zone ----
   // Stop fires on press so the stop tap's release can't land on the Next

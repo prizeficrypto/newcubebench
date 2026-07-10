@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { CompTimer } from "../components/CompTimer.tsx";
 import { SolveTimer } from "../components/SolveTimer.tsx";
+import { StackmatTimer } from "../components/StackmatTimer.tsx";
 import { PRACTICE_EVENT_IDS, randomScramble } from "../lib/scrambles.ts";
 import { eventOrDefault } from "../lib/events.ts";
 import { store } from "../lib/store.ts";
@@ -27,12 +29,14 @@ const pbAo5Key = (ev: string) => `cb_timer_pb_ao5_v2:${ev}`;
 const pbAo12Key = (ev: string) => `cb_timer_pb_ao12_v2:${ev}`;
 
 type Mode = "regular" | "skill";
+type Input = "keyboard" | "stackmat";
 /** A practice solve. Stage splits are present only for Skill-Timer solves. */
 type PracticeSolve = { totalMs: number; stages?: Solve["stages"] };
 
 export default function SkillTimer() {
   const { t } = useT();
   const [mode, setMode] = useState<Mode>("regular");
+  const [input, setInput] = useState<Input>("keyboard");
   const [event, setEvent] = useState<string>("333");
   const [scramble, setScramble] = useState<string>(() => randomScramble("333"));
 
@@ -182,8 +186,39 @@ export default function SkillTimer() {
             {t("Skill Timer (stage splits) is a work in progress.")}
           </p>
 
+          <p className="scramble-note tertiary">
+            {t("These are random practice scrambles, not official WCA scrambles.")}{" "}
+            <Link to="/app" className="scramble-note__link">
+              {t("To practice real competition scrambles and simulate competitions, go here.")}
+            </Link>
+          </p>
+
+          <div className="timer-mode" role="group" aria-label={t("Timer input")}>
+            <button
+              className={`timer-mode__btn${input === "keyboard" ? " is-active" : ""}`}
+              onClick={() => setInput("keyboard")}
+              aria-pressed={input === "keyboard"}
+            >
+              {t("Keyboard")}
+            </button>
+            <button
+              className={`timer-mode__btn${input === "stackmat" ? " is-active" : ""}`}
+              onClick={() => setInput("stackmat")}
+              aria-pressed={input === "stackmat"}
+            >
+              {t("Stackmat")}
+            </button>
+          </div>
+
           {scramble ? (
-            mode === "skill" ? (
+            input === "stackmat" ? (
+              <StackmatTimer
+                key={`sm-${solves.length}`}
+                scramble={scramble}
+                solveIndex={solves.length}
+                onSolve={(totalMs) => record({ totalMs })}
+              />
+            ) : mode === "skill" ? (
               <SolveTimer
                 key={`s-${solves.length}`}
                 scramble={scramble}
