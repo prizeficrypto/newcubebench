@@ -97,6 +97,10 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
     "Focus on": "À travailler",
     "Recent solves": "Solves récents",
     "Session times": "Temps de la session",
+    "Official WCA random-state scrambles, generated fresh for practice.":
+      "Mélanges officiels WCA en état aléatoire, générés à neuf pour l'entraînement.",
+    "To solve a real competition's exact scrambles and see where you'd place, go to Competitions.":
+      "Pour résoudre les mélanges exacts d'une vraie compétition et voir où vous vous classeriez, allez dans Compétitions.",
   },
   ko: {
     // Results.tsx
@@ -191,6 +195,10 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
     "Focus on": "집중할 부분",
     "Recent solves": "최근 솔브",
     "Session times": "세션 기록",
+    "Official WCA random-state scrambles, generated fresh for practice.":
+      "연습용으로 새로 생성한 공식 WCA 랜덤 상태 스크램블입니다.",
+    "To solve a real competition's exact scrambles and see where you'd place, go to Competitions.":
+      "실제 대회의 정확한 스크램블을 풀고 몇 위일지 확인하려면 대회로 이동하세요.",
   },
   es: {
     // Results.tsx
@@ -285,5 +293,9 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
     "Focus on": "Enfócate en",
     "Recent solves": "Solves recientes",
     "Session times": "Tiempos de la sesión",
+    "Official WCA random-state scrambles, generated fresh for practice.":
+      "Mezclados oficiales de estado aleatorio de la WCA, generados al momento para practicar.",
+    "To solve a real competition's exact scrambles and see where you'd place, go to Competitions.":
+      "Para resolver los mezclados exactos de una competición real y ver en qué puesto quedarías, ve a Competiciones.",
   },
 };

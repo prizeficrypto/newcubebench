@@ -170,6 +170,13 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
     Advanced: "Avancé",
     Fast: "Rapide",
     "Something went wrong.": "Une erreur s'est produite.",
+
+    // ---- Pricing: launch offer ----
+    "Free right now": "Gratuit dès maintenant",
+    "Launch offer": "Offre de lancement",
+    "Everyone who signs up now gets Cube Bench Pro completely free. No card.":
+      "Toute personne qui s'inscrit maintenant obtient Cube Bench Pro entièrement gratuitement. Sans carte.",
+    "Free through {date}.": "Gratuit jusqu'au {date}.",
   },
 
   ko: {
@@ -333,6 +340,13 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
     Advanced: "상급",
     Fast: "빠름",
     "Something went wrong.": "문제가 발생했습니다.",
+
+    // ---- Pricing: launch offer ----
+    "Free right now": "지금은 무료",
+    "Launch offer": "출시 기념 혜택",
+    "Everyone who signs up now gets Cube Bench Pro completely free. No card.":
+      "지금 가입하는 모든 분께 Cube Bench Pro를 완전 무료로 드립니다. 카드 등록 불필요.",
+    "Free through {date}.": "{date}까지 무료입니다.",
   },
 
   es: {
@@ -501,5 +515,12 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
     Advanced: "Avanzado",
     Fast: "Rápido",
     "Something went wrong.": "Algo salió mal.",
+
+    // ---- Pricing: launch offer ----
+    "Free right now": "Gratis ahora mismo",
+    "Launch offer": "Oferta de lanzamiento",
+    "Everyone who signs up now gets Cube Bench Pro completely free. No card.":
+      "Todo el que se registre ahora consigue Cube Bench Pro completamente gratis. Sin tarjeta.",
+    "Free through {date}.": "Gratis hasta el {date}.",
   },
 };

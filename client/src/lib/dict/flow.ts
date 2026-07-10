@@ -139,6 +139,14 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
     "Start the": "Commencer le",
     "Loading scrambles…": "Chargement des mélanges…",
     "Back to results": "Retour aux résultats",
+    // CompetitionPicker filters
+    "Featured (free)": "En vedette (gratuit)",
+    "Browse all competitions": "Parcourir toutes les compétitions",
+    "Search by name or city…": "Rechercher par nom ou ville…",
+    "Country": "Pays",
+    "All countries": "Tous les pays",
+    "Year": "Année",
+    "All years": "Toutes les années",
   },
   ko: {
     // CompTimer
@@ -273,6 +281,14 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
     "Start the": "시작:",
     "Loading scrambles…": "스크램블 불러오는 중…",
     "Back to results": "결과로 돌아가기",
+    // CompetitionPicker filters
+    "Featured (free)": "추천 (무료)",
+    "Browse all competitions": "모든 대회 둘러보기",
+    "Search by name or city…": "이름 또는 도시로 검색…",
+    "Country": "국가",
+    "All countries": "모든 국가",
+    "Year": "연도",
+    "All years": "모든 연도",
   },
   es: {
     // CompTimer
@@ -408,5 +424,13 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
     "Start the": "Comenzar la",
     "Loading scrambles…": "Cargando scrambles…",
     "Back to results": "Volver a los resultados",
+    // CompetitionPicker filters
+    "Featured (free)": "Destacadas (gratis)",
+    "Browse all competitions": "Explorar todas las competiciones",
+    "Search by name or city…": "Buscar por nombre o ciudad…",
+    "Country": "País",
+    "All countries": "Todos los países",
+    "Year": "Año",
+    "All years": "Todos los años",
   },
 };
