@@ -3228,3 +3228,22 @@
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+
+/* ---------- launch promo: struck prices + "free now" ---------- */
+.plan__amount.is-struck {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  color: var(--text-tertiary);
+}
+.plan__free-now {
+  margin-left: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.plan__free-note {
+  margin: 6px 0 18px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent);
+}

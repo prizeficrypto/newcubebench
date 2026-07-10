@@ -118,14 +118,20 @@ export default function Pricing() {
           <p className="plan__price">
             {plan === "monthly" ? (
               <>
-                <span className="plan__amount mono">$3.49</span>
+                <span className="plan__amount mono is-struck">$3.49</span>
                 <span className="plan__per">{t("/month")}</span>
               </>
             ) : (
               <>
-                <span className="plan__amount mono">$25</span>
+                <span className="plan__amount mono is-struck">$25</span>
                 <span className="plan__per">{t("/year · $2.08/mo, billed yearly")}</span>
               </>
+            )}
+            <span className="plan__free-now">{t("Free right now")}</span>
+          </p>
+          <p className="plan__free-note">
+            {t(
+              "Cube Bench is completely free for everyone who signs up in the next month.",
             )}
           </p>
           <ul className="plan__features">
