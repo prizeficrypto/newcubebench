@@ -197,7 +197,7 @@ export default function SkillTimer() {
           <p className="scramble-note tertiary">
             {t("Official WCA random-state scrambles, generated fresh for practice.")}{" "}
             <Link to="/app" className="scramble-note__link">
-              {t("To solve a real competition's exact scrambles and see where you'd place, go to Competitions.")}
+              {t("To solve real competition scrambles, go to Competitions.")}
             </Link>
           </p>
 
