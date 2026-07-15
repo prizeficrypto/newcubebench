@@ -23,7 +23,7 @@ export function NavBar() {
   return (
     <header className={`nav nav--marketing${scrolled ? " is-scrolled" : ""}`}>
       <nav className="nav__inner container">
-        <NavLink to="/" className="nav__wordmark">
+        <NavLink to="/welcome" className="nav__wordmark">
           <Mark className="nav__mark" size={15} />
           Cube Bench
         </NavLink>

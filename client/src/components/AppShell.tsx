@@ -33,7 +33,7 @@ export function AppShell() {
     <>
       <header className="nav nav--app">
         <nav className="nav__inner container">
-          <NavLink to="/" className="nav__wordmark">
+          <NavLink to="/app" end className="nav__wordmark">
             <Mark className="nav__mark" size={15} />
             Cube Bench
           </NavLink>
@@ -63,6 +63,9 @@ export function AppShell() {
             >
               {t("Settings")}
             </NavLink>
+            <Link to="/welcome" className="nav__link">
+              {t("About")}
+            </Link>
             {user ? (
               <>
                 <span className="nav__user-chip" title={user.email}>

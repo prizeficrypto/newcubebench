@@ -156,26 +156,41 @@ export type CompSearch = {
  */
 export async function searchCompetitions(
   opts: CompSearch = {},
-): Promise<WcaCompetition[]> {
+): Promise<{ competitions: WcaCompetition[]; hasMore: boolean }> {
+  const perPage = opts.perPage ?? 25;
   const params = new URLSearchParams();
   if (opts.q?.trim()) params.set("q", opts.q.trim());
   if (opts.country) params.set("country_iso2", opts.country);
   if (opts.start) params.set("start", opts.start);
-  if (opts.end) params.set("end", opts.end);
+  // Only surface competitions that have already happened: a future competition
+  // has no scrambles yet. Cap the end-date filter at today (UTC), honouring a
+  // tighter caller end (e.g. a past-year filter) when given.
+  const today = new Date().toISOString().slice(0, 10);
+  params.set("end", opts.end && opts.end < today ? opts.end : today);
   params.set("sort", "-start_date");
-  params.set("per_page", String(opts.perPage ?? 25));
+  params.set("per_page", String(perPage));
   params.set("page", String(Math.max(1, opts.page ?? 1)));
-  const { data } = await wcaFetch<WcaCompetition[]>(
-    `/competitions?${params.toString()}`,
-  );
-  return (data ?? []).map((c) => ({
-    id: c.id,
-    name: c.name,
-    city: c.city,
-    country_iso2: c.country_iso2,
-    start_date: c.start_date,
-    end_date: c.end_date,
-  }));
+  const { data } = await wcaFetch<
+    Array<WcaCompetition & { results_posted_at?: string | null }>
+  >(`/competitions?${params.toString()}`);
+  const raw = data ?? [];
+  // results_posted_at is set once the WCA has processed the competition and its
+  // results + scrambles are public — the signal that it can actually be
+  // simulated. Unprocessed comps (scrambles not posted yet) are hidden until
+  // then, and reappear automatically once the WCA posts them.
+  const competitions = raw
+    .filter((c) => Boolean(c.results_posted_at))
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      city: c.city,
+      country_iso2: c.country_iso2,
+      start_date: c.start_date,
+      end_date: c.end_date,
+    }));
+  // hasMore reflects the raw page (pre-filter) so scroll-to-load-more keeps
+  // paging even when a page loses a comp or two to the filter.
+  return { competitions, hasMore: raw.length === perPage };
 }
 
 export type RoundScrambleSet = {

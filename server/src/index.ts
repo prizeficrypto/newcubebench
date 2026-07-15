@@ -139,11 +139,10 @@ app.get(
     const page = Math.max(1, Math.min(50, Number(str(req.query.page)) || 1));
     const perPage = 24;
     const key = `search:${q.toLowerCase()}|${country}|${start}|${end}|p${page}`;
-    const results = await withCache(key, TTL.SHORT_MS, () =>
+    const { competitions, hasMore } = await withCache(key, TTL.SHORT_MS, () =>
       searchCompetitions({ q, country, start, end, page, perPage }),
     );
-    // A full page back suggests there may be another.
-    res.json({ competitions: results, page, hasMore: results.length === perPage });
+    res.json({ competitions, page, hasMore });
   }),
 );
 

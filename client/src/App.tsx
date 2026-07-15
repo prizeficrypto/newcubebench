@@ -34,8 +34,11 @@ export default function App() {
       <LanguageProvider>
       <BrowserRouter>
         <Routes>
+          {/* The app is the front door now: land straight in the Simulator.
+              The marketing page moves to /welcome, reached from a nav button. */}
+          <Route path="/" element={<Navigate to="/app" replace />} />
           <Route
-            path="/"
+            path="/welcome"
             element={
               <>
                 <NavBar />
