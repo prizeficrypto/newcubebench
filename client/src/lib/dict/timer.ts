@@ -6,6 +6,8 @@
  */
 export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
   fr: {
+    "A timer for every puzzle": "Un chronomètre pour chaque puzzle",
+    "timer": "chronomètre",
     // About + FAQ (SEO)
     "Cube Timer: free online Rubik's Cube timer": "Cube Timer : chronomètre Rubik's Cube gratuit en ligne",
     "Cube Bench is a free online Rubik's Cube timer for speedcubers. Every solve gets an official WCA random-state scramble, and your times, averages (ao5, ao12, ao100) and personal bests are tracked automatically. It works in any browser, on desktop and phone, with no download.": "Cube Bench est un chronomètre Rubik's Cube gratuit en ligne pour les speedcubeurs. Chaque résolution reçoit un mélange officiel WCA, et vos temps, moyennes (ao5, ao12, ao100) et records sont suivis automatiquement. Il fonctionne dans n'importe quel navigateur, sur ordinateur et téléphone, sans téléchargement.",
@@ -193,6 +195,8 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
       "Oui, tout : chaque compétition WCA passée, le timer et vos statistiques. Cube Bench est financé par la publicité, qui ne s'affiche jamais pendant vos résolutions.",
   },
   ko: {
+    "A timer for every puzzle": "모든 퍼즐을 위한 타이머",
+    "timer": "타이머",
     // About + FAQ (SEO)
     "Cube Timer: free online Rubik's Cube timer": "큐브 타이머: 무료 온라인 루빅스 큐브 타이머",
     "Cube Bench is a free online Rubik's Cube timer for speedcubers. Every solve gets an official WCA random-state scramble, and your times, averages (ao5, ao12, ao100) and personal bests are tracked automatically. It works in any browser, on desktop and phone, with no download.": "Cube Bench는 스피드큐버를 위한 무료 온라인 루빅스 큐브 타이머입니다. 솔브마다 공식 WCA 랜덤 상태 스크램블이 주어지고, 기록과 평균(ao5, ao12, ao100), 개인 최고 기록이 자동으로 관리됩니다. 설치 없이 컴퓨터와 휴대폰의 모든 브라우저에서 작동합니다.",
@@ -375,6 +379,8 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
       "네, 전부 무료입니다. 지난 모든 WCA 대회, 타이머, 통계까지요. Cube Bench는 광고로 운영되며, 솔브하는 동안에는 광고가 표시되지 않습니다.",
   },
   es: {
+    "A timer for every puzzle": "Un cronómetro para cada puzle",
+    "timer": "cronómetro",
     // About + FAQ (SEO)
     "Cube Timer: free online Rubik's Cube timer": "Cube Timer: cronómetro de cubo de Rubik gratis en línea",
     "Cube Bench is a free online Rubik's Cube timer for speedcubers. Every solve gets an official WCA random-state scramble, and your times, averages (ao5, ao12, ao100) and personal bests are tracked automatically. It works in any browser, on desktop and phone, with no download.": "Cube Bench es un cronómetro de cubo de Rubik gratis en línea para speedcubers. Cada resolución recibe una mezcla oficial de la WCA, y tus tiempos, medias (ao5, ao12, ao100) y récords se guardan automáticamente. Funciona en cualquier navegador, en ordenador y móvil, sin descargas.",

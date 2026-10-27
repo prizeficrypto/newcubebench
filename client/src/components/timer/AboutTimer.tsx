@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useT } from "../../lib/i18n.tsx";
 import { ABOUT_INTRO, ABOUT_TITLE, FAQ, FEATURES } from "../../lib/seoContent.ts";
+import { PUZZLE_PAGES } from "../../lib/puzzlePages.ts";
 
 /**
  * Below-the-fold About + FAQ on the timer page: what this is, what it does,
@@ -18,6 +19,14 @@ export function AboutTimer() {
           <li key={f}>{t(f)}</li>
         ))}
       </ul>
+      <h3 className="group-title">{t("A timer for every puzzle")}</h3>
+      <nav className="tabout__puzzles" aria-label={t("A timer for every puzzle")}>
+        {PUZZLE_PAGES.map((p) => (
+          <Link key={p.slug} to={`/timer/${p.slug}`} className="pill pill--sm">
+            {p.name}
+          </Link>
+        ))}
+      </nav>
       <h3 className="group-title">{t("Frequently asked questions")}</h3>
       <div className="group tabout__faq">
         {FAQ.map(([q, a]) => (

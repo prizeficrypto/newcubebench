@@ -95,7 +95,8 @@ const CLIENT_DIST = join(
 );
 // On Vercel the client is served by Vercel's CDN, not Express — skip this.
 if (!process.env.VERCEL && existsSync(CLIENT_DIST)) {
-  app.use(express.static(CLIENT_DIST));
+  // extensions: /timer/2x2 is served from the prerendered timer/2x2.html
+  app.use(express.static(CLIENT_DIST, { extensions: ["html"] }));
   app.use((req, res, next) => {
     // Missing build assets 404 rather than getting index.html as "JavaScript".
     if (req.method !== "GET" || req.path.startsWith("/api") || req.path.startsWith("/assets/")) {

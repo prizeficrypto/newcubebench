@@ -53,6 +53,10 @@ export default function App() {
               <Route path="/" element={<AppShell />}>
                 <Route index element={<Timer />} />
               </Route>
+              {/* One landing page per puzzle: /timer/2x2, /timer/megaminx … */}
+              <Route path="/timer/:puzzle" element={<AppShell />}>
+                <Route index element={<Timer />} />
+              </Route>
               <Route
                 path="/welcome"
                 element={

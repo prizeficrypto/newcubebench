@@ -1357,3 +1357,9 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
   color: var(--accent);
   text-decoration: none;
 }
+
+.tabout__puzzles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import { PAGE_BY_SLUG, puzzlePageDescription, puzzlePageTitle } from "../lib/puzzlePages.ts";
 import { useT } from "../lib/i18n.tsx";
 import { AdSlot } from "../components/AdSlot.tsx";
 import { useTimerEngine } from "../components/timer/useTimerEngine.ts";
@@ -13,7 +14,7 @@ import {
 import { isTouchDevice } from "../lib/pointer.ts";
 import { formatSolve, formatTime } from "../lib/timer/format.ts";
 import { newId, effectiveMs, type Penalty, type SolveSource } from "../lib/timer/model.ts";
-import { TIMER_EVENTS } from "../lib/timer/puzzles.ts";
+import { eventName, TIMER_EVENTS } from "../lib/timer/puzzles.ts";
 import { settingsIndicators, useTimerSettings } from "../lib/timer/settings.ts";
 import { sessionStats } from "../lib/timer/stats.ts";
 import { timerStore, useTimerStore } from "../lib/timer/storage.ts";
@@ -51,14 +52,38 @@ const ImportExportDialog = lazy(() =>
  */
 export default function Timer() {
   const { t, lang } = useT();
-  usePageMeta({
-    title: "Cube Timer · Free Online Rubik's Cube Timer | Cube Bench",
-    description:
-      "Free online Rubik's Cube timer with official WCA scrambles, inspection, ao5 and ao12 stats, csTimer import and Stackmat support. Then solve real WCA competition rounds.",
-    path: "/",
-  });
+  const { puzzle } = useParams();
+  const page = puzzle ? PAGE_BY_SLUG.get(puzzle) : undefined;
+  usePageMeta(
+    page
+      ? { title: puzzlePageTitle(page), description: puzzlePageDescription(page), path: `/timer/${page.slug}` }
+      : {
+          title: "Cube Timer · Free Online Rubik's Cube Timer | Cube Bench",
+          description:
+            "Free online Rubik's Cube timer with official WCA scrambles, inspection, ao5 and ao12 stats, csTimer import and Stackmat support. Then solve real WCA competition rounds.",
+          path: "/",
+          noindex: Boolean(puzzle), // an unknown /timer/… slug
+        },
+  );
   const [settings] = useTimerSettings();
   const { sessions, active } = useTimerStore();
+
+  // A puzzle page (/timer/pyraminx) opens on that puzzle: switch to your
+  // session for it, or start one. Only when the page is opened, so changing
+  // puzzle afterwards still works normally.
+  useEffect(() => {
+    if (!page) return;
+    let live = true;
+    void timerStore.ready.then(() => {
+      if (!live || timerStore.active()?.event === page.event) return;
+      const existing = timerStore.sessions().find((s) => s.event === page.event);
+      if (existing) timerStore.setActive(existing.id);
+      else timerStore.create(t(eventName(page.event)), page.event);
+    });
+    return () => {
+      live = false;
+    };
+  }, [page?.slug]); // eslint-disable-line react-hooks/exhaustive-deps
   const event = active?.event ?? "333";
   const precision = settings.precision;
   const [dialog, setDialog] = useState<"settings" | "sessions" | "io" | "new" | "help" | null>(null);
@@ -293,7 +318,9 @@ export default function Timer() {
   return (
     <div className={`screen container--wide ttimer${settings.zen ? " ttimer--zen" : ""}`}>
       {/* The page's one H1, for search engines and screen readers. */}
-      <h1 className="sr-only">{t("Cube Timer: free online Rubik's Cube timer")}</h1>
+      <h1 className="sr-only">
+        {page ? `${page.name} ${t("timer")}` : t("Cube Timer: free online Rubik's Cube timer")}
+      </h1>
       <div className="ttimer__bar tz-hide">
         <div className="ttimer__pickers">
         <select
