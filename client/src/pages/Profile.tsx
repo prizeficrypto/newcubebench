@@ -1,3 +1,4 @@
+import { usePageMeta } from "../lib/seo.ts";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../lib/auth.tsx";
@@ -17,6 +18,12 @@ export default function Profile() {
   const [p, setP] = useState<PublicProfile | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "missing" | "off">("loading");
   const [busy, setBusy] = useState(false);
+  usePageMeta({
+    title: p ? `${p.displayName} (@${p.handle}) · Cube Bench` : "Cuber profile | Cube Bench",
+    description: p ? `${p.displayName}'s speedcubing personal bests and simulated WCA rounds on Cube Bench.` : undefined,
+    path: `/app/u/${handle}`,
+    noindex: state === "missing" || state === "off",
+  });
 
   useEffect(() => {
     setState("loading");

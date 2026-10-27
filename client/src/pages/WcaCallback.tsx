@@ -1,3 +1,4 @@
+import { usePageMeta } from "../lib/seo.ts";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth, WCA_RETURN_KEY } from "../lib/auth.tsx";
@@ -11,6 +12,7 @@ import { useT } from "../lib/i18n.tsx";
  */
 export default function WcaCallback() {
   const { t } = useT();
+  usePageMeta({ title: "Signing in | Cube Bench", noindex: true });
   const { finishWca } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export default function WcaCallback() {
     }
     finishWca(code, state)
       .then(({ mode, created }) => {
-        let back = mode === "connect" ? "/app/settings" : "/app";
+        let back = mode === "connect" ? "/app/settings" : "/";
         try {
           back = sessionStorage.getItem(WCA_RETURN_KEY) ?? back;
           sessionStorage.removeItem(WCA_RETURN_KEY);
@@ -52,7 +54,7 @@ export default function WcaCallback() {
               <Link className="btn" to="/join">
                 {t("Try again")}
               </Link>
-              <Link className="btn btn--ghost" to="/app">
+              <Link className="btn btn--ghost" to="/">
                 {t("Open the timer")}
               </Link>
             </div>

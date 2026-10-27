@@ -1,3 +1,4 @@
+import { usePageMeta } from "../lib/seo.ts";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Reveal } from "../components/Reveal.tsx";
@@ -78,6 +79,12 @@ const FAQ = [
 
 export default function Home() {
   const { t } = useT();
+  usePageMeta({
+    title: "Cube Bench · Free Cube Timer and WCA Competition Simulator",
+    description:
+      "Find out where you'd actually place: a free Rubik's Cube timer plus a simulator that lets you solve the real scrambles from past WCA competitions.",
+    path: "/welcome",
+  });
   const stageMainRef = useRef<HTMLDivElement>(null);
 
   // The showcase settles from a slight perspective tilt to flat over the
@@ -141,7 +148,7 @@ export default function Home() {
           )}
         </p>
         <div className="hero__ctas hero__fade" style={{ animationDelay: "0.78s" }}>
-          <Link className="btn" to="/app">
+          <Link className="btn" to="/">
             {t("Launch App")}
           </Link>
           <a className="btn btn--ghost" href="#how">
@@ -498,7 +505,7 @@ export default function Home() {
                 "Cube timer websites haven't changed in years, and none of them answer the question everyone practicing at home has: am I ready for a real competition? Cube Bench turns that into a measurement. Solve a real round, see where you'd have landed, and sign up for your first competition because the numbers say you're ready.",
               )}
             </p>
-            <Link className="btn claim__cta" to="/app">
+            <Link className="btn claim__cta" to="/">
               {t("Launch App")}
             </Link>
           </div>
@@ -518,10 +525,10 @@ export default function Home() {
           </div>
           <div className="footer__col">
             <span className="footer__head">{t("Product")}</span>
-            <Link className="footer__link" to="/app">
+            <Link className="footer__link" to="/">
               {t("Launch App")}
             </Link>
-            <Link className="footer__link" to="/app">
+            <Link className="footer__link" to="/">
               {t("Timer")}
             </Link>
             <Link className="footer__link" to="/app/competitions">

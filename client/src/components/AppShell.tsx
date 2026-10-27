@@ -31,12 +31,12 @@ export function AppShell() {
     <>
       <header className="nav nav--app">
         <nav className="nav__inner container">
-          <NavLink to="/app" end className="nav__wordmark">
+          <NavLink to="/" end className="nav__wordmark">
             <Mark className="nav__mark" size={15} />
             Cube Bench
           </NavLink>
           <div className="nav__links">
-            <NavLink to="/app" end className={link}>
+            <NavLink to="/" end className={link}>
               {t("Timer")}
             </NavLink>
             <NavLink to="/app/competitions" className={link}>
@@ -87,7 +87,7 @@ export function AppShell() {
       </main>
       {/* Phones: an iOS-style tab bar replaces the nav links. */}
       <nav className="tabbar" aria-label={t("Sections")}>
-        <NavLink to="/app" end className={({ isActive }) => `tabbar__item${isActive ? " is-active" : ""}`}>
+        <NavLink to="/" end className={({ isActive }) => `tabbar__item${isActive ? " is-active" : ""}`}>
           {t("Timer")}
         </NavLink>
         <NavLink to="/app/competitions" className={({ isActive }) => `tabbar__item${isActive ? " is-active" : ""}`}>

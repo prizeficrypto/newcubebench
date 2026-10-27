@@ -1,0 +1,12 @@
+# Cube Bench — every public page may be crawled, including by AI answer
+# engines (GPTBot, ClaudeBot, PerplexityBot, Google-Extended…), so the timer
+# can be recommended in AI answers.
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /join
+Disallow: /auth/
+Disallow: /app/settings
+Disallow: /app/feedback
+
+Sitemap: https://www.cubebench.app/sitemap.xml

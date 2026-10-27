@@ -1,3 +1,4 @@
+import { usePageMeta } from "../lib/seo.ts";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../lib/auth.tsx";
@@ -13,6 +14,7 @@ import "../styles/social.css";
  */
 export default function Friends() {
   const { t } = useT();
+  usePageMeta({ title: "Friends | Cube Bench", noindex: true });
   const { user, loading } = useAuth();
   const [event, setEvent] = useState("333");
   const [sort, setSort] = useState<"single" | "ao5" | "ao12">("ao5");

@@ -2,28 +2,181 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cube Bench · find out where you'd actually place</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Cube Timer · Free Online Rubik's Cube Timer | Cube Bench</title>
     <meta
       name="description"
-      content="Solve the real scrambles from real WCA competitions and see where your average would have placed against the people who were there."
+      content="Free online Rubik's Cube timer with official WCA scrambles, inspection, ao5 and ao12 stats, csTimer import and Stackmat support. Then solve real WCA competition rounds."
     />
+    <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#faf9f7" />
-    <meta property="og:title" content="Cube Bench" />
+    <meta name="apple-mobile-web-app-title" content="Cube Bench" />
+    <meta name="application-name" content="Cube Bench" />
+
+    <!-- Social previews (iMessage, Discord, X, Facebook…) -->
+    <meta property="og:site_name" content="Cube Bench" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Cube Timer · Free Online Rubik's Cube Timer | Cube Bench" />
     <meta
       property="og:description"
-      content="Solve the real scrambles from a WCA round and see exactly where you'd have placed in its official results."
+      content="A free speedcubing timer with official WCA scrambles, real stats and a competition simulator. Works in any browser, no download."
     />
-    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.cubebench.app/" />
+    <meta property="og:image" content="https://www.cubebench.app/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://www.cubebench.app/og.png" />
+
     <!-- 3×3 grid favicon in the accent color; inline so there's no extra request -->
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='%232b4fd8'%3E%3Crect x='2' y='2' width='8' height='8' rx='2'/%3E%3Crect x='12' y='2' width='8' height='8' rx='2'/%3E%3Crect x='22' y='2' width='8' height='8' rx='2'/%3E%3Crect x='2' y='12' width='8' height='8' rx='2'/%3E%3Crect x='12' y='12' width='8' height='8' rx='2'/%3E%3Crect x='22' y='12' width='8' height='8' rx='2'/%3E%3Crect x='2' y='22' width='8' height='8' rx='2'/%3E%3Crect x='12' y='22' width='8' height='8' rx='2'/%3E%3Crect x='22' y='22' width='8' height='8' rx='2'/%3E%3C/g%3E%3C/svg%3E"
     />
-    <link rel="preconnect" href="https://visualcube.api.cubing.net" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!--
+      Structured data: tells search engines and AI answer engines, in a
+      machine-readable way, what this site is (a free web app), what it does,
+      and the answers to common questions. Keep the FAQ text in sync with
+      client/src/lib/seoContent.ts (the visible About section).
+    -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://www.cubebench.app/#website",
+            "name": "Cube Bench",
+            "alternateName": ["Cube Bench Timer", "cubebench.app"],
+            "url": "https://www.cubebench.app/",
+            "inLanguage": ["en", "fr", "ko", "es"]
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://www.cubebench.app/#app",
+            "name": "Cube Bench Cube Timer",
+            "url": "https://www.cubebench.app/",
+            "description": "A free online Rubik's Cube timer for speedcubers with official WCA scrambles, WCA inspection, ao5/ao12 statistics, csTimer import and export, Stackmat and Bluetooth timer support, and a simulator for real WCA competition rounds.",
+            "applicationCategory": "UtilitiesApplication",
+            "applicationSubCategory": "Speedcubing timer",
+            "operatingSystem": "Any (web browser)",
+            "browserRequirements": "Requires JavaScript",
+            "isAccessibleForFree": true,
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+            "featureList": [
+              "Official WCA random-state scrambles for every WCA puzzle",
+              "WCA inspection with spoken 8 and 12 second calls",
+              "Ao5, ao12, ao100 and session statistics",
+              "Import and export of csTimer, Twisty Timer and Cubic Timer times",
+              "Stackmat and GAN Smart Timer support",
+              "Cross solver, scramble images and trend charts",
+              "Simulator for real WCA competition rounds with placement"
+            ],
+            "inLanguage": ["en", "fr", "ko", "es"]
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://www.cubebench.app/#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Is Cube Bench free?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Yes. The cube timer, every tool and the competition simulator are free to use in any browser, with no download or account needed." }
+              },
+              {
+                "@type": "Question",
+                "name": "How do I use the Rubik's Cube timer?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Hold the spacebar (or touch and hold on a phone) until the time turns green, let go to start, and press any key or tap to stop. Every solve gets a new official WCA scramble." }
+              },
+              {
+                "@type": "Question",
+                "name": "Does Cube Bench use official WCA scrambles?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Yes. Scrambles are random-state scrambles made the same way as the World Cube Association's official scrambler, for 3x3, 2x2, 4x4 to 7x7, one-handed, blindfolded, Pyraminx, Megaminx, Skewb, Square-1 and Clock." }
+              },
+              {
+                "@type": "Question",
+                "name": "How is an ao5 calculated?",
+                "acceptedAnswer": { "@type": "Answer", "text": "An average of 5 (ao5) drops your best and worst solve and averages the middle three, exactly like an official WCA average. An ao12 drops one best and one worst of the last 12." }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I import my times from csTimer?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Yes. Import a csTimer export file, a Twisty Timer or Cubic Timer export, or a plain list of times, and your sessions are added. You can export back to csTimer's format at any time." }
+              },
+              {
+                "@type": "Question",
+                "name": "Does it work with a Stackmat timer?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Yes. Plug a Stackmat into your computer's microphone or line-in jack and connect it in the timer settings. GAN Smart Timers connect over Bluetooth in Chrome and Edge." }
+              },
+              {
+                "@type": "Question",
+                "name": "What is the WCA competition simulator?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Pick a past WCA competition, solve the exact scrambles from one of its rounds, and see where your average would have placed against the official results." }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!--
+        What a crawler that doesn't run JavaScript sees (many AI answer
+        engines). The app replaces this the moment it loads; the same text is
+        visible to people in the timer's About section. Visually hidden so
+        there's no flash of plain text before the app paints.
+      -->
+      <main class="prerender">
+        <h1>Cube Timer: free online Rubik's Cube timer</h1>
+        <p>
+          Cube Bench is a free online Rubik's Cube timer for speedcubers. Every
+          solve gets an official WCA random-state scramble, and your times,
+          averages (ao5, ao12, ao100) and personal bests are tracked
+          automatically. It works in any browser, on desktop and phone, with no
+          download.
+        </p>
+        <h2>Features</h2>
+        <ul>
+          <li>Official WCA scrambles for 3x3, 2x2, 4x4 to 7x7, OH, BLD, Pyraminx, Megaminx, Skewb, Square-1 and Clock</li>
+          <li>WCA inspection with spoken 8 and 12 second calls</li>
+          <li>Ao5, ao12 and session stats calculated the official WCA way</li>
+          <li>Import and export csTimer, Twisty Timer and Cubic Timer times</li>
+          <li>Stackmat and GAN Smart Timer support, or type your times in</li>
+          <li>Cross solver, scramble images, trend charts and a metronome</li>
+          <li>Competition simulator: solve the real scrambles from past WCA competitions and see where you would have placed</li>
+        </ul>
+        <h2>Frequently asked questions</h2>
+        <h3>Is Cube Bench free?</h3>
+        <p>Yes. The cube timer, every tool and the competition simulator are free to use in any browser, with no download or account needed.</p>
+        <h3>How do I use the Rubik's Cube timer?</h3>
+        <p>Hold the spacebar (or touch and hold on a phone) until the time turns green, let go to start, and press any key or tap to stop. Every solve gets a new official WCA scramble.</p>
+        <h3>Does Cube Bench use official WCA scrambles?</h3>
+        <p>Yes. Scrambles are random-state scrambles made the same way as the World Cube Association's official scrambler.</p>
+        <h3>How is an ao5 calculated?</h3>
+        <p>An average of 5 drops your best and worst solve and averages the middle three, exactly like an official WCA average.</p>
+        <h3>Can I import my times from csTimer?</h3>
+        <p>Yes. Import a csTimer export file, a Twisty Timer or Cubic Timer export, or a plain list of times.</p>
+        <h3>Does it work with a Stackmat timer?</h3>
+        <p>Yes. Plug a Stackmat into the microphone or line-in jack and connect it in the timer settings. GAN Smart Timers connect over Bluetooth.</p>
+        <h3>What is the WCA competition simulator?</h3>
+        <p>Pick a past WCA competition, solve the exact scrambles from one of its rounds, and see where your average would have placed against the official results.</p>
+        <p><a href="/app/competitions">Simulate a WCA competition round</a> · <a href="/welcome">About Cube Bench</a> · <a href="/privacy">Privacy</a></p>
+      </main>
+    </div>
+    <style>
+      /* screen-reader-only until the app replaces it */
+      .prerender {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+    </style>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

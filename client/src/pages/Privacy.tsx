@@ -1,3 +1,4 @@
+import { usePageMeta } from "../lib/seo.ts";
 import { Link } from "react-router-dom";
 import { useT } from "../lib/i18n.tsx";
 
@@ -69,6 +70,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
 
 export default function Privacy() {
   const { t } = useT();
+  usePageMeta({ title: "Privacy Policy | Cube Bench", description: "How Cube Bench handles your data: what stays on your device, what an account stores, ads and analytics.", path: "/privacy" });
   return (
     <article className="screen container privacy">
       <span className="eyebrow">{t("Privacy")}</span>

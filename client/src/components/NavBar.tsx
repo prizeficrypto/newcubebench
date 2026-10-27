@@ -38,7 +38,7 @@ export function NavBar() {
             {t("FAQ")}
           </a>
           <LanguageSwitcher />
-          <Link className="btn nav__launch" to="/app">
+          <Link className="btn nav__launch" to="/">
             {t("Launch App")}
           </Link>
         </div>

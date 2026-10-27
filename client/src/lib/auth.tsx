@@ -191,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = store.get(TOKEN_KEY) ?? undefined;
     const { url } = await postJson<{ url: string }>("/api/auth/wca/start", { mode }, token);
     try {
-      sessionStorage.setItem(WCA_RETURN_KEY, mode === "connect" ? "/app/settings" : "/app");
+      sessionStorage.setItem(WCA_RETURN_KEY, mode === "connect" ? "/app/settings" : "/");
     } catch {
       /* the default return target is fine */
     }

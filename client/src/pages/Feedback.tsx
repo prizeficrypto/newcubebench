@@ -1,3 +1,4 @@
+import { usePageMeta } from "../lib/seo.ts";
 import { useState } from "react";
 import { submitFeedback } from "../lib/api.ts";
 import { useAuth } from "../lib/auth.tsx";
@@ -12,6 +13,7 @@ type Kind = "bug" | "suggestion";
  */
 export default function Feedback() {
   const { t } = useT();
+  usePageMeta({ title: "Feedback | Cube Bench", noindex: true });
   const { user } = useAuth();
   const [kind, setKind] = useState<Kind>("bug");
   const [message, setMessage] = useState("");

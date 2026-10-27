@@ -1,3 +1,4 @@
+import { usePageMeta } from "../lib/seo.ts";
 import { useEffect, useRef, useState } from "react";
 import {
   getCutoff,
@@ -49,6 +50,12 @@ type SavedRound = {
  */
 export default function Simulator() {
   const { t } = useT();
+  usePageMeta({
+    title: "WCA Competition Simulator · Solve Real Competition Scrambles | Cube Bench",
+    description:
+      "Solve the official scrambles from any past WCA competition round and see where your average would have placed against the real results. Free, in your browser.",
+    path: "/app/competitions",
+  });
   const [step, setStep] = useState<Step>("picking");
   const [comp, setComp] = useState<Competition | null>(null);
   const [events, setEvents] = useState<EventMeta[]>([]);

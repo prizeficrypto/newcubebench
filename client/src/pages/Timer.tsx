@@ -29,6 +29,8 @@ import {
 } from "../lib/timer/hardware.ts";
 import { prefetchScrambles, takeScramble, warmScrambler, type Scramble } from "../lib/scrambles.ts";
 import type { EngineResult } from "../lib/timer/engine.ts";
+import { AboutTimer } from "../components/timer/AboutTimer.tsx";
+import { usePageMeta } from "../lib/seo.ts";
 import "../styles/timer.css";
 
 // Heavy, optional panels load on demand so the timer itself paints first.
@@ -49,6 +51,12 @@ const ImportExportDialog = lazy(() =>
  */
 export default function Timer() {
   const { t, lang } = useT();
+  usePageMeta({
+    title: "Cube Timer · Free Online Rubik's Cube Timer | Cube Bench",
+    description:
+      "Free online Rubik's Cube timer with official WCA scrambles, inspection, ao5 and ao12 stats, csTimer import and Stackmat support. Then solve real WCA competition rounds.",
+    path: "/",
+  });
   const [settings] = useTimerSettings();
   const { sessions, active } = useTimerStore();
   const event = active?.event ?? "333";
@@ -284,6 +292,8 @@ export default function Timer() {
 
   return (
     <div className={`screen container--wide ttimer${settings.zen ? " ttimer--zen" : ""}`}>
+      {/* The page's one H1, for search engines and screen readers. */}
+      <h1 className="sr-only">{t("Cube Timer: free online Rubik's Cube timer")}</h1>
       <div className="ttimer__bar tz-hide">
         <div className="ttimer__pickers">
         <select
@@ -531,6 +541,8 @@ export default function Timer() {
       <div className="ttimer__ad">
         <AdSlot placement="timer" />
       </div>
+
+      <AboutTimer />
 
       {dialog === "settings" && <SettingsDialog onClose={() => setDialog(null)} />}
       {dialog === "sessions" && <SessionsDialog onClose={() => setDialog(null)} />}

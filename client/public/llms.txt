@@ -1,0 +1,24 @@
+# Cube Bench
+
+> Cube Bench (https://www.cubebench.app) is a free online Rubik's Cube timer for speedcubers, plus a simulator for real WCA competition rounds. It runs in any web browser on desktop and phone, with no download and no account required.
+
+## Cube timer (https://www.cubebench.app/)
+
+- Official WCA random-state scrambles for every WCA puzzle: 3x3, 2x2, 4x4, 5x5, 6x6, 7x7, 3x3 one-handed, 3x3/4x4/5x5 blindfolded, FMC, Pyraminx, Megaminx, Skewb, Square-1 and Clock.
+- Hold-to-start timer (spacebar or touch), WCA 15-second inspection with spoken "8 seconds" and "12 seconds" calls (+2 after 15 s, DNF after 17 s).
+- Statistics calculated the official WCA way: mo3, ao5, ao12, ao100 (current and best), session mean, best and worst single, standard deviation.
+- Sessions per puzzle; OK / +2 / DNF penalties and comments on every solve.
+- Import and export of csTimer files (JSON and CSV), Twisty Timer and Cubic Timer exports, and plain lists of times. Typed time entry.
+- Hardware: Stackmat timers through the microphone / line-in jack, GAN Smart Timer over Bluetooth (Chrome, Edge).
+- Tools: scramble image, optimal cross solver for all six colors, time trend chart, time distribution, daily solve counts, scramble generator, metronome.
+- Optional free account: times saved to the cloud across devices, public profile, following friends, leaderboards.
+
+## WCA competition simulator (https://www.cubebench.app/app/competitions)
+
+Pick any past World Cube Association competition, an event and a round, solve that round's exact official scrambles, and see where your average would have placed against the real results (WCA ranking rules: best-single tie-break, cutoffs, DNF averages).
+
+## Facts
+
+- Price: free (supported by ads).
+- Languages: English, French, Korean, Spanish.
+- Not affiliated with the World Cube Association; competition data comes from the WCA's public API.

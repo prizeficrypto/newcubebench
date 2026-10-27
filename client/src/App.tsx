@@ -15,6 +15,7 @@ import { AppShell } from "./components/AppShell.tsx";
 import { Onboarding } from "./components/Onboarding.tsx";
 import { Mark } from "./components/Mark.tsx";
 import Timer from "./pages/Timer.tsx";
+import { usePageMeta } from "./lib/seo.ts";
 
 // The timer is the front door and ships in the main bundle; everything else
 // loads on demand so a first visit paints the timer as fast as possible.
@@ -30,8 +31,8 @@ const WcaCallback = lazy(() => import("./pages/WcaCallback.tsx"));
 
 /**
  * Routes:
- *   /                 → the timer (the app is the front door)
- *   /app              — the timer
+ *   /                 — the timer (the homepage)
+ *   /app              → redirects to /
  *   /app/competitions — the competition simulator
  *   /app/friends, /app/u/:handle, /app/r/:id — social
  *   /app/settings, /app/feedback
@@ -48,7 +49,10 @@ export default function App() {
         <BrowserRouter>
           <Suspense fallback={<PageLoading />}>
             <Routes>
-              <Route path="/" element={<Navigate to="/app" replace />} />
+              {/* The timer IS the homepage: served at "/", no redirect. */}
+              <Route path="/" element={<AppShell />}>
+                <Route index element={<Timer />} />
+              </Route>
               <Route
                 path="/welcome"
                 element={
@@ -77,21 +81,21 @@ export default function App() {
               />
 
               <Route path="/app" element={<AppShell />}>
-                <Route index element={<Timer />} />
+                <Route index element={<Navigate to="/" replace />} />
                 <Route path="competitions" element={<Simulator />} />
                 <Route path="friends" element={<Friends />} />
                 <Route path="u/:handle" element={<Profile />} />
                 <Route path="r/:id" element={<SharedResult />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="feedback" element={<Feedback />} />
-                <Route path="skill-timer" element={<Navigate to="/app" replace />} />
-                <Route path="pricing" element={<Navigate to="/app" replace />} />
+                <Route path="skill-timer" element={<Navigate to="/" replace />} />
+                <Route path="pricing" element={<Navigate to="/" replace />} />
               </Route>
 
               {/* legacy paths from the tabbed layout */}
               <Route path="/simulator" element={<Navigate to="/app/competitions" replace />} />
-              <Route path="/skill-timer" element={<Navigate to="/app" replace />} />
-              <Route path="/pricing" element={<Navigate to="/app" replace />} />
+              <Route path="/skill-timer" element={<Navigate to="/" replace />} />
+              <Route path="/pricing" element={<Navigate to="/" replace />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
@@ -117,15 +121,16 @@ function PageLoading() {
  */
 function JoinScreen() {
   const { user } = useAuth();
+  usePageMeta({ title: "Sign in | Cube Bench", noindex: true });
   const navigate = useNavigate();
   useEffect(() => {
-    if (user && user.profile.avg333) navigate("/app", { replace: true });
+    if (user && user.profile.avg333) navigate("/", { replace: true });
   }, [user, navigate]);
   return (
     <>
       <header className="nav">
         <nav className="nav__inner container">
-          <Link to="/app" className="nav__wordmark">
+          <Link to="/" className="nav__wordmark">
             <Mark className="nav__mark" size={15} />
             Cube Bench
           </Link>
@@ -151,7 +156,7 @@ function NotFound() {
             Maybe the scramble was bad. The timer is still where it always was.
           </p>
           <div className="notfound__actions">
-            <Link className="btn" to="/app">
+            <Link className="btn" to="/">
               Open the timer
             </Link>
             <Link className="btn btn--ghost" to="/welcome">

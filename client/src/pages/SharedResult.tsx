@@ -1,3 +1,4 @@
+import { usePageMeta } from "../lib/seo.ts";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useT } from "../lib/i18n.tsx";
@@ -12,6 +13,11 @@ export default function SharedResult() {
   const { t } = useT();
   const [r, setR] = useState<Result | null>(null);
   const [missing, setMissing] = useState(false);
+  usePageMeta({
+    title: r ? `${r.displayName ?? "A Cube Bench player"} at ${r.compName} | Cube Bench` : "Shared result | Cube Bench",
+    description: r ? `A simulated ${r.compName} round on Cube Bench. Try the same scrambles yourself.` : undefined,
+    path: `/app/r/${id}`,
+  });
 
   useEffect(() => {
     socialApi.result(id).then(setR).catch(() => setMissing(true));

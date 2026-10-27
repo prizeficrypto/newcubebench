@@ -1,3 +1,4 @@
+import { usePageMeta } from "../lib/seo.ts";
 import { Link } from "react-router-dom";
 import { useT, type Lang } from "../lib/i18n.tsx";
 import { useAuth } from "../lib/auth.tsx";
@@ -17,6 +18,7 @@ const LANGS: { value: Lang; label: string }[] = [
 
 export default function Settings() {
   const { t, lang, setLang } = useT();
+  usePageMeta({ title: "Settings | Cube Bench", noindex: true });
   const { user, signOut } = useAuth();
 
   return (
