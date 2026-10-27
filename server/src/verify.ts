@@ -1,68 +1,51 @@
 /**
- * Standalone verification (build-order step 1): fetch a real competition's
- * first-round 3x3 scramble set and ranking, apply the grouping/sorting logic,
- * and print the result so we can confirm correctness before building any UI.
- *
- *   node src/verify.ts [competitionId ...]
+ * Live sanity check against the real WCA API: scramble grouping, ranking
+ * order, advancement and the recent feed. Run: npm run verify
+ * (needs network; no database). Exits non-zero on the first failed check.
  */
 import {
-  getCompetition,
-  getFirstRound333Ranking,
-  getFirstRound333Scrambles,
+  getEventRanking,
+  getEventRoundScrambles,
+  getRecentCompetitions,
 } from "./wca.ts";
 
-function fmt(cs: number): string {
-  // centiseconds -> M:SS.xx / SS.xx
-  const totalSec = cs / 100;
-  if (totalSec >= 60) {
-    const m = Math.floor(totalSec / 60);
-    const s = (totalSec % 60).toFixed(2).padStart(5, "0");
-    return `${m}:${s}`;
-  }
-  return totalSec.toFixed(2);
+let failed = 0;
+function check(name: string, ok: boolean, detail = ""): void {
+  console.log(`${ok ? "✓" : "✗"} ${name}${detail ? ` — ${detail}` : ""}`);
+  if (!ok) failed++;
 }
 
-const ids = process.argv.slice(2);
-if (ids.length === 0) {
-  ids.push("CubingUSANationals2023", "WC2019", "Anytime2016"); // mixed sanity set
+// Scramble groups: big rounds go past Z (A..Z, then AA, AB, …).
+const r1 = await getEventRoundScrambles("WC2023", "333", "1", "AA");
+check(
+  "WC2023 3x3 round 1 group AA is selectable",
+  r1.available && r1.groupId === "AA" && (r1.scrambles?.length ?? 0) >= 5,
+  `${r1.groups?.length} groups, ${r1.groups?.slice(24, 28).join(" ")}`,
+);
+const missing = await getEventRoundScrambles("WC2023", "333", "1", "ZZ");
+check("an unknown group is an error, not group A", !missing.available);
+
+// Ranking: official order (ties broken by best single), cut from who advanced.
+const pyram = await getEventRanking("WC2023", "pyram", "d");
+const tie = pyram.competitors.filter((c) => c.averageCs === 567).map((c) => `${c.pos}:${c.bestCs}`);
+check("tied averages are ordered by best single", tie[0]?.startsWith("185:398") ?? false, tie.join(" "));
+const r1rank = await getEventRanking("WC2023", "333", "1");
+check(
+  "advancement counts the real cut, not the next round's size",
+  (r1rank.nextRound?.advancedCount ?? 0) >= 395,
+  `${r1rank.nextRound?.advancedCount} of ${r1rank.totalCompetitors}`,
+);
+check(
+  "no-average competitors are listed after valid averages",
+  r1rank.competitors.at(-1)?.averageCs === null,
+);
+
+// The recent feed surfaces newly published competitions on its own.
+const recent = await getRecentCompetitions(5);
+check("recent published competitions", recent.length > 0, recent.map((c) => c.id).join(", "));
+
+if (failed) {
+  console.error(`\n${failed} check(s) failed`);
+  process.exit(1);
 }
-
-for (const id of ids) {
-  console.log(`\n=== ${id} ===`);
-  try {
-    const comp = await getCompetition(id);
-    console.log(`${comp.name}  (${comp.start_date} → ${comp.end_date})`);
-  } catch (err) {
-    console.log(`  competition lookup failed: ${(err as Error).message}`);
-    continue;
-  }
-
-  const round = await getFirstRound333Scrambles(id);
-  if (!round.available) {
-    console.log(`  scrambles: ${round.reason}`);
-    continue;
-  }
-
-  console.log(
-    `  first round: "${round.roundTypeId}" (${round.roundName}), group ${round.groupId}, ${round.scrambles!.length} scrambles`,
-  );
-  round.scrambles!.forEach((s, i) => console.log(`   ${i + 1}. ${s}`));
-
-  const ranking = await getFirstRound333Ranking(id, round.roundTypeId!);
-  console.log(
-    `  ranking: ${ranking.totalCompetitors} competitors, ${ranking.averagesAsc.length} with a valid average`,
-  );
-  if (ranking.fastestAverage) {
-    const a = ranking.averagesAsc;
-    const median = a[Math.floor(a.length / 2)];
-    console.log(
-      `   fastest ${fmt(a[0])} · median ${fmt(median)} · slowest ${fmt(a[a.length - 1])}`,
-    );
-    // Sanity-check placement math with a sample average.
-    const sample = 1243; // 12.43s
-    const better = a.filter((x) => x < sample).length;
-    console.log(
-      `   e.g. a ${fmt(sample)} average would place ${better + 1} of ${ranking.totalCompetitors}`,
-    );
-  }
-}
+console.log("\nall checks passed");

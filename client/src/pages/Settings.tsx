@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { useT, type Lang } from "../lib/i18n.tsx";
 import { useAuth } from "../lib/auth.tsx";
+import { useState } from "react";
+import { SocialSettings } from "../components/SocialSettings.tsx";
 
 /**
  * Settings: pick your language, and (when signed in) see your account and
@@ -16,15 +18,6 @@ const LANGS: { value: Lang; label: string }[] = [
 export default function Settings() {
   const { t, lang, setLang } = useT();
   const { user, signOut } = useAuth();
-
-  const onPromo = Boolean(user?.promoUntil && user.promoUntil > Date.now());
-  const plan = !user
-    ? null
-    : user.pro
-      ? onPromo
-        ? t("Pro (free month)")
-        : t("Pro")
-      : t("Free");
 
   return (
     <div className="screen container settings">
@@ -68,14 +61,7 @@ export default function Settings() {
               <span className="tertiary">{t("Email")}</span>
               <span className="mono">{user.email}</span>
             </div>
-            <div className="settings__row">
-              <span className="tertiary">{t("Plan")}</span>
-              <span>{plan}</span>
-            </div>
             <div className="settings__actions">
-              <Link className="btn btn--secondary" to="/app/pricing">
-                {t("Manage plan")}
-              </Link>
               <button className="btn--ghost btn" onClick={() => signOut()}>
                 {t("Sign out")}
               </button>
@@ -90,6 +76,71 @@ export default function Settings() {
           </div>
         )}
       </section>
+
+      {user && <WcaSection />}
+      {user && <SocialSettings />}
     </div>
+  );
+}
+
+/**
+ * Connect a WCA account: a verified WCA ID unlocks comparing against your
+ * official results and shows on your public profile. Only the WCA can set it.
+ */
+function WcaSection() {
+  const { t } = useT();
+  const { user, wcaAvailable, startWca, disconnectWca } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const p = user?.profile;
+  if (!p?.wcaId && !wcaAvailable) return null;
+
+  const run = (fn: () => Promise<void>) => {
+    setBusy(true);
+    setError(null);
+    fn()
+      .catch((e) => setError(e instanceof Error ? e.message : t("Something went wrong.")))
+      .finally(() => setBusy(false));
+  };
+
+  return (
+    <section className="card settings__section">
+      <h2 className="settings__title">{t("WCA account")}</h2>
+      {p?.wcaId ? (
+        <>
+          <div className="settings__row settings__wca">
+            {p.wcaAvatarUrl && <img src={p.wcaAvatarUrl} alt="" className="settings__wca-avatar" />}
+            <span>
+              {p.wcaName} ·{" "}
+              <a
+                className="mono"
+                href={`https://www.worldcubeassociation.org/persons/${p.wcaId}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {p.wcaId}
+              </a>
+            </span>
+          </div>
+          <div className="settings__actions">
+            <button className="btn--ghost btn" disabled={busy} onClick={() => run(disconnectWca)}>
+              {t("Disconnect")}
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="muted">
+            {t("Connect your WCA account to verify your WCA ID. It's used to compare your simulator results with your official ones.")}
+          </p>
+          <div className="settings__actions">
+            <button className="btn btn--secondary" disabled={busy} onClick={() => run(() => startWca("connect"))}>
+              {t("Connect WCA account")}
+            </button>
+          </div>
+        </>
+      )}
+      {error && <p className="gate__error">{error}</p>}
+    </section>
   );
 }

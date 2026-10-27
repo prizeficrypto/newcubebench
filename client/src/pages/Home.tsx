@@ -64,11 +64,11 @@ const FAQ = [
   },
   {
     q: "Do I need an account?",
-    a: "Yes, and it's free. Your account holds your speed profile and, if you upgrade, your Pro plan. Sign up with an email and password, or with Google.",
+    a: "No. The timer and every competition work without one. A free account saves your times to the cloud so they follow you to any device, and lets you follow friends and show up on leaderboards.",
   },
   {
-    q: "What does Pro add?",
-    a: "The full library of past WCA competitions, plus skill analytics that follow your stage splits across sessions. It's $3.49 a month (or $25 a year), with a 3-day free trial, and you can cancel anytime.",
+    q: "Is it really free?",
+    a: "Yes, all of it: every past WCA competition, the timer, and your stats. Cube Bench is supported by ads, and they never show while you're solving.",
   },
   {
     q: "What happens if I mis-tap mid-solve?",
@@ -293,7 +293,7 @@ export default function Home() {
               <h3 className="how__step-title">{t("Pick a real competition")}</h3>
               <p className="muted how__step-body">
                 {t(
-                  "Any competition in the library, first round through the final. Three featured championships are free.",
+                  "Any competition in the library, first round through the final.",
                 )}
               </p>
             </div>
@@ -370,7 +370,7 @@ export default function Home() {
                 "Mis-taps aren't fatal either. Every solve can be redone, marked +2, or flagged DNF before it counts, and leaving a round pauses it for later.",
               )}
             </p>
-            <Link className="btn btn--ghost timerband__cta" to="/app">
+            <Link className="btn btn--ghost timerband__cta" to="/app/competitions">
               {t("Try a solve")} <span className="arrow">→</span>
             </Link>
           </div>
@@ -521,11 +521,11 @@ export default function Home() {
             <Link className="footer__link" to="/app">
               {t("Launch App")}
             </Link>
-            <Link className="footer__link" to="/app/skill-timer">
-              {t("Skill Timer")}
+            <Link className="footer__link" to="/app">
+              {t("Timer")}
             </Link>
-            <Link className="footer__link" to="/app/pricing">
-              {t("Pricing")}
+            <Link className="footer__link" to="/app/competitions">
+              {t("Competitions")}
             </Link>
           </div>
           <div className="footer__col">

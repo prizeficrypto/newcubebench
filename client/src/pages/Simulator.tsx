@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
+  getCutoff,
+  getEvents,
   getRounds,
   getRound,
+  prefetchRanking,
   type Competition,
+  type Cutoff,
   type EventMeta,
   type RoundMeta,
   type RoundScrambleSet,
 } from "../lib/api.ts";
-import { useAuth } from "../lib/auth.tsx";
-import type { Attempt } from "../lib/cubing.ts";
+import { missedCutoff, type Attempt } from "../lib/cubing.ts";
 import { eventOrDefault, type ClientEvent } from "../lib/events.ts";
 import { store } from "../lib/store.ts";
 import { CompetitionPicker } from "../components/CompetitionPicker.tsx";
@@ -46,8 +48,6 @@ type SavedRound = {
  * refresh resumes rather than losing solves.
  */
 export default function Simulator() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
   const { t } = useT();
   const [step, setStep] = useState<Step>("picking");
   const [comp, setComp] = useState<Competition | null>(null);
@@ -63,6 +63,8 @@ export default function Simulator() {
   const requiredAttempts = event.solves;
   // advancing to a round the user just qualified for
   const [advanceTo, setAdvanceTo] = useState<{
+    compId: string;
+    eventId: string;
     roundTypeId: string;
     roundName: string;
   } | null>(null);
@@ -70,6 +72,13 @@ export default function Simulator() {
   const [advanceError, setAdvanceError] = useState<string | null>(null);
   // guards for the background preload: ignore stale/duplicate fetch results
   const advanceReqRef = useRef(0);
+  // Bumped whenever the user moves on (new comp, event, round, reset, resume):
+  // a slow response for an earlier choice is then ignored instead of
+  // pairing the wrong competition with the wrong scrambles.
+  const flowRef = useRef(0);
+  // Bumped by a group switch and by every new attempt: a switch that lands
+  // after the user kept solving is dropped rather than wiping their attempts.
+  const groupReqRef = useRef(0);
   const mountedRef = useRef(true);
   useEffect(() => () => {
     mountedRef.current = false;
@@ -81,13 +90,71 @@ export default function Simulator() {
     return s.attempts.length > 0 && s.attempts.length < need ? s : null;
   });
 
+  // The round's cutoff (combined rounds), fetched in the background so it
+  // never delays starting. If it lands after the cutoff attempts were already
+  // solved and missed, the round ends at that point.
+  const [cutoff, setCutoff] = useState<Cutoff | null>(null);
+  useEffect(() => {
+    setCutoff(null);
+    if (!comp || !round?.roundTypeId) return;
+    let live = true;
+    getCutoff(comp.id, round.roundTypeId, event.id)
+      .then((r) => live && setCutoff(r.cutoff))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [comp?.id, event.id, round?.roundTypeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (step !== "solving" || !cutoff || attempts.length < cutoff.numberOfAttempts) return;
+    const first = attempts.slice(0, cutoff.numberOfAttempts);
+    if (attempts.length < requiredAttempts && missedCutoff(first, cutoff)) {
+      setAttempts(first);
+      store.remove(ROUND_KEY);
+      setSaved(null);
+      setStep("results");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cutoff]);
+
+  // Deep link (?comp=WC2019&event=333&round=1), e.g. "Try this round
+  // yourself" from a shared result: open straight into that round.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const compId = q.get("comp");
+    if (!compId) return;
+    const evId = q.get("event") ?? "333";
+    const roundId = q.get("round");
+    (async () => {
+      const { competition, events: evs } = await getEvents(compId);
+      setComp(competition);
+      setEvents(evs);
+      if (!evs.some((e) => e.id === evId)) {
+        setStep("events");
+        return;
+      }
+      const ev = eventOrDefault(evId);
+      setEvent(ev);
+      const { rounds: rs } = await getRounds(compId, evId);
+      setRounds(rs);
+      const meta = rs.find((r) => r.roundTypeId === roundId) ?? (rs.length === 1 ? rs[0] : undefined);
+      if (meta) void loadRound(competition, ev, meta);
+      else setStep(rs.length ? "rounds" : "events");
+    })().catch(() => setStep("picking"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Load a specific round's scrambles for the current event, then start it.
   async function loadRound(c: Competition, ev: ClientEvent, meta: RoundMeta) {
+    const flow = ++flowRef.current;
     setStep("loadingRound");
     setRoundError(null);
     try {
       const { round: r } = await getRound(c.id, meta.roundTypeId, ev.id);
+      if (flow !== flowRef.current) return;
       if (r.available && r.scrambles && r.scrambles.length >= ev.solves) {
+        // The ranking downloads while the user solves: results are instant.
+        prefetchRanking(c.id, r.roundTypeId ?? meta.roundTypeId, ev.id);
         setRound(r);
         setAttempts([]);
         setStep("solving");
@@ -96,6 +163,7 @@ export default function Simulator() {
         setStep("rounds");
       }
     } catch (err) {
+      if (flow !== flowRef.current) return;
       setRoundError(err instanceof Error ? err.message : "Couldn't load that round.");
       setStep("rounds");
     }
@@ -105,18 +173,18 @@ export default function Simulator() {
   // scrambles in the background so continuing is instant (smooth, no spinner).
   function advance(roundTypeId: string, roundName: string) {
     if (!comp) return;
-    // Advancing to the next round is an account feature — guests sign up.
-    if (!user) {
-      navigate("/join");
-      return;
-    }
     // Already loaded this exact round (e.g. returned from "Back to results"
     // and clicked again): reuse it, no refetch, no loading flash.
-    if (advanceTo?.roundTypeId === roundTypeId && advanceRound) {
+    if (
+      advanceTo?.compId === comp.id &&
+      advanceTo.eventId === event.id &&
+      advanceTo.roundTypeId === roundTypeId &&
+      advanceRound
+    ) {
       setStep("qualified");
       return;
     }
-    setAdvanceTo({ roundTypeId, roundName });
+    setAdvanceTo({ compId: comp.id, eventId: event.id, roundTypeId, roundName });
     setAdvanceRound(null);
     setAdvanceError(null);
     setStep("qualified");
@@ -142,6 +210,7 @@ export default function Simulator() {
   // Begin the round we just celebrated qualifying for.
   function startAdvancedRound() {
     if (!advanceRound) return;
+    if (comp && advanceRound.roundTypeId) prefetchRanking(comp.id, advanceRound.roundTypeId, event.id);
     setRound(advanceRound);
     setAttempts([]);
     setAdvanceTo(null);
@@ -155,13 +224,15 @@ export default function Simulator() {
     setEvents(evs);
     setEventsError(null);
     setRoundError(null);
-    // Skip the chooser when there's only one event.
-    if (evs.length === 1) chooseEvent(c, evs[0]);
-    else setStep("events");
+    // Show the event step right away (it carries the loading state and any
+    // error); with a single event, go straight on to its rounds.
+    setStep("events");
+    if (evs.length === 1) void chooseEvent(c, evs[0]);
   }
 
   // Event picked: fetch that event's rounds, then choose a round.
   async function chooseEvent(c: Competition, evMeta: EventMeta) {
+    const flow = ++flowRef.current;
     const ev = eventOrDefault(evMeta.id);
     setEvent(ev);
     setEventsLoading(true);
@@ -169,6 +240,7 @@ export default function Simulator() {
     setRoundError(null);
     try {
       const { available, reason, rounds: rs } = await getRounds(c.id, ev.id);
+      if (flow !== flowRef.current) return;
       setEventsLoading(false);
       if (available && rs.length > 0) {
         setRounds(rs);
@@ -179,6 +251,7 @@ export default function Simulator() {
         setEventsError(reason ?? "That event isn't available.");
       }
     } catch (err) {
+      if (flow !== flowRef.current) return;
       setEventsLoading(false);
       setEventsError(
         err instanceof Error ? err.message : "Couldn't load that event.",
@@ -200,11 +273,13 @@ export default function Simulator() {
     ) {
       return;
     }
+    const req = ++groupReqRef.current;
     setGroupBusy(true);
     setRoundError(null);
     try {
       const { round: r } = await getRound(comp.id, round.roundTypeId, event.id, groupId);
-      if (r.available && r.scrambles && r.scrambles.length >= event.solves) {
+      if (req !== groupReqRef.current) return; // the user kept solving, or left
+      if (r.available && r.groupId === groupId && r.scrambles && r.scrambles.length >= event.solves) {
         setRound(r);
         setAttempts([]);
         store.remove(ROUND_KEY);
@@ -221,9 +296,13 @@ export default function Simulator() {
 
   function handleAttempt(attempt: Attempt) {
     if (!comp || !round) return;
+    groupReqRef.current++; // a pending group switch must not clear this attempt
     const next = [...attempts, attempt];
     setAttempts(next);
-    if (next.length >= requiredAttempts) {
+    // A missed cutoff ends the round right there, as it would officially.
+    const stoppedByCutoff =
+      cutoff !== null && next.length === cutoff.numberOfAttempts && missedCutoff(next, cutoff);
+    if (next.length >= requiredAttempts || stoppedByCutoff) {
       store.remove(ROUND_KEY);
       setSaved(null);
       setStep("results");
@@ -266,6 +345,12 @@ export default function Simulator() {
   }
 
   function reset() {
+    flowRef.current++;
+    groupReqRef.current++;
+    advanceReqRef.current++;
+    setAdvanceTo(null);
+    setAdvanceRound(null);
+    setAdvanceError(null);
     store.remove(ROUND_KEY);
     setSaved(null);
     setComp(null);
@@ -306,6 +391,17 @@ export default function Simulator() {
                   <button
                     className="btn"
                     onClick={() => {
+                      flowRef.current++;
+                      advanceReqRef.current++;
+                      setAdvanceTo(null);
+                      setAdvanceRound(null);
+                      // Back from a resumed round goes to the picker, not to a
+                      // round list left over from another competition.
+                      setEvents([]);
+                      setRounds([]);
+                      if (saved.round.roundTypeId) {
+                        prefetchRanking(saved.comp.id, saved.round.roundTypeId, saved.eventId);
+                      }
                       setComp(saved.comp);
                       setEvent(eventOrDefault(saved.eventId));
                       setRound(saved.round);
@@ -361,6 +457,7 @@ export default function Simulator() {
           onChangeGroup={changeGroup}
           groupBusy={groupBusy}
           onBack={leaveRound}
+          cutoff={cutoff}
         />
       )}
 
@@ -375,6 +472,7 @@ export default function Simulator() {
             attempts={attempts}
             onRestart={reset}
             onAdvance={advance}
+            cutoff={cutoff}
           />
         )}
 

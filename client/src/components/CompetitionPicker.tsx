@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import {
   getEvents,
   getHighlight,
+  getRecentCompetitions,
+  prefetchEvents,
   searchCompetitions,
   type Competition,
   type EventMeta,
 } from "../lib/api.ts";
-import { FEATURED_COMPS, FEATURED_COMP_IDS } from "../lib/featured.ts";
+import { FEATURED_COMPS } from "../lib/featured.ts";
+import { AdSlot } from "./AdSlot.tsx";
 
 /** Best-effort highlight for a featured comp, keyed by comp id. */
 type Highlight = {
@@ -16,14 +18,12 @@ type Highlight = {
   eventCount: number;
 };
 import { isTouchDevice } from "../lib/pointer.ts";
-import { useAuth } from "../lib/auth.tsx";
 import { useT } from "../lib/i18n.tsx";
 
 /**
- * Competition picker with visual free/Pro gating (no accounts in this
- * version). With an empty search, the three featured (free) competitions are
- * shown. Searching reveals the whole library; non-featured comps render
- * locked and link to Pricing instead of starting a session.
+ * Competition picker: a few featured championships up top, then the whole
+ * WCA library (search, country and year filters, scroll to load more). Every
+ * competition is free.
  *
  * Selecting a free comp fetches the events it held that can be simulated;
  * comps whose scrambles were never uploaded show "Scrambles not available"
@@ -34,10 +34,7 @@ export function CompetitionPicker({
 }: {
   onProceed: (comp: Competition, events: EventMeta[]) => void;
 }) {
-  const navigate = useNavigate();
-  const { user } = useAuth();
   const { t } = useT();
-  const isPro = Boolean(user?.pro);
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
   const [year, setYear] = useState("");
@@ -56,6 +53,23 @@ export function CompetitionPicker({
   // matches — this guards against slow WCA responses arriving out of order.
   const requestToken = useRef(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Competitions the WCA just published — new ones appear on their own. Re-read
+  // when the tab regains focus (the API layer caches it for 10 minutes).
+  const [recent, setRecent] = useState<(Competition & { results_posted_at?: string })[]>([]);
+  useEffect(() => {
+    let live = true;
+    const load = () =>
+      getRecentCompetitions()
+        .then((r) => live && setRecent(r.competitions))
+        .catch(() => {});
+    load();
+    window.addEventListener("focus", load);
+    return () => {
+      live = false;
+      window.removeEventListener("focus", load);
+    };
+  }, []);
 
   // Best-effort highlights for the featured info cards. Fetched once on mount,
   // in parallel; a failure just leaves that card without winner/events.
@@ -86,8 +100,7 @@ export function CompetitionPicker({
     };
   }, []);
 
-  // Guests never browse — the effect below is only meaningful when signed in.
-  const canBrowse = Boolean(user);
+  const canBrowse = true;
 
   // Turn the chosen filters into the backend's query shape.
   function buildOpts(pageNum: number) {
@@ -174,18 +187,6 @@ export function CompetitionPicker({
 
   async function select(comp: Competition) {
     if (selectingId || unavailable[comp.id]) return;
-    if (!FEATURED_COMP_IDS.has(comp.id)) {
-      // The full library is beyond the featured free comps: guests sign up
-      // first, signed-in free users see the Pro upgrade.
-      if (!user) {
-        navigate("/join");
-        return;
-      }
-      if (!isPro) {
-        navigate("/app/pricing");
-        return;
-      }
-    }
     setSelectingId(comp.id);
     try {
       const { events } = await getEvents(comp.id);
@@ -222,6 +223,8 @@ export function CompetitionPicker({
             key={comp.id}
             className={`comp-card${note ? " is-unavailable" : ""}`}
             onClick={() => select(comp)}
+            onPointerEnter={() => prefetchEvents(comp.id)}
+            onFocus={() => prefetchEvents(comp.id)}
             disabled={!!note || !!selectingId}
             aria-label={comp.name}
           >
@@ -230,12 +233,7 @@ export function CompetitionPicker({
               <span className="comp-card__right">
                 {busy && <span className="spinner spinner--sm" />}
                 {note && <span className="comp-row__note">{note}</span>}
-                {!busy && !note && (
-                  <>
-                    {!isPro && <span className="comp-row__free">Free</span>}
-                    <span className="comp-row__chev">›</span>
-                  </>
-                )}
+                {!busy && !note && <span className="comp-row__chev">›</span>}
               </span>
             </span>
             <span className="comp-card__meta tertiary">
@@ -271,14 +269,15 @@ export function CompetitionPicker({
   function renderRow(comp: Competition) {
     const note = unavailable[comp.id];
     const busy = selectingId === comp.id;
-    const locked = !FEATURED_COMP_IDS.has(comp.id) && !isPro;
     return (
       <button
         key={comp.id}
-        className={`comp-row${note ? " is-unavailable" : ""}${locked ? " is-locked" : ""}`}
+        className={`comp-row${note ? " is-unavailable" : ""}`}
         onClick={() => select(comp)}
+        onPointerEnter={() => prefetchEvents(comp.id)}
+        onFocus={() => prefetchEvents(comp.id)}
         disabled={!!note || !!selectingId}
-        aria-label={locked ? `${comp.name}, included with Pro` : comp.name}
+        aria-label={comp.name}
       >
         <span className="comp-row__main">
           <span className="comp-row__name">{comp.name}</span>
@@ -291,15 +290,7 @@ export function CompetitionPicker({
         <span className="comp-row__right">
           {busy && <span className="spinner spinner--sm" />}
           {note && <span className="comp-row__note">{note}</span>}
-          {!busy && !note && locked && <span className="comp-row__pro">Pro</span>}
-          {!busy && !note && !locked && (
-            <>
-              {FEATURED_COMP_IDS.has(comp.id) && !isPro && (
-                <span className="comp-row__free">Free</span>
-              )}
-              <span className="comp-row__chev">›</span>
-            </>
-          )}
+          {!busy && !note && <span className="comp-row__chev">›</span>}
         </span>
       </button>
     );
@@ -319,35 +310,27 @@ export function CompetitionPicker({
         </p>
       </div>
 
-      {!user ? (
-        <>
-          <div className="picker__signup">
-            <div className="picker__signup-text">
-              <span className="picker__signup-title">
-                {t("These featured competitions are free to try.")}
-              </span>
-              <span className="tertiary">
-                {t("Create a free account to unlock every WCA competition, ever. No card, no cost.")}
-              </span>
-            </div>
-            <Link to="/join" className="btn picker__signup-btn">
-              {t("Sign up free")}
-            </Link>
+      {recent.length > 0 && (
+        <div className="picker__recent">
+          <h3 className="picker__section-title">{t("Just published")}</h3>
+          <div className="picker__list card">
+            {recent.slice(0, 6).map((c) => (
+              <div key={c.id} className="picker__recent-row">
+                {renderRow(c)}
+                {c.results_posted_at && (
+                  <span className="tertiary picker__posted">{postedAgo(c.results_posted_at, t)}</span>
+                )}
+              </div>
+            ))}
           </div>
-          {featuredCards}
-        </>
-      ) : (
-        <>
-          <h3 className="picker__section-title">{t("Featured (free)")}</h3>
-          {featuredCards}
+        </div>
+      )}
 
-          <div className="picker__browse">
-            <h3 className="picker__section-title">{t("Browse all competitions")}</h3>
-            {!isPro && (
-              <p className="picker__plan-note tertiary">
-                {t("Featured competitions are free. The full library of past WCA competitions comes with Pro.")}
-              </p>
-            )}
+      <h3 className="picker__section-title">{t("Featured")}</h3>
+      {featuredCards}
+
+      <div className="picker__browse">
+        <h3 className="picker__section-title">{t("Browse all competitions")}</h3>
 
             <div className="picker__filters">
               <input
@@ -428,10 +411,17 @@ export function CompetitionPicker({
               )}
             </div>
           </div>
-        </>
-      )}
+      <AdSlot placement="competitions" />
     </div>
   );
+}
+
+/** "Published today" / "Published 3 days ago" from an ISO timestamp. */
+function postedAgo(iso: string, t: (k: string) => string): string {
+  const days = Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
+  if (!Number.isFinite(days) || days <= 0) return t("Published today");
+  if (days === 1) return t("Published yesterday");
+  return t("Published {n} days ago").replace("{n}", String(days));
 }
 
 /** A curated set of the busiest cubing countries, for the Country filter. */

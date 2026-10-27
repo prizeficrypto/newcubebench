@@ -1,4 +1,5 @@
 import { roundName, roundOrder } from "./roundTypes.ts";
+import { TTL, withCache } from "./cache.ts";
 import { getEventDef, minScrambles, SUPPORTED_EVENTS } from "./wcaEvents.ts";
 
 const WCA_BASE = "https://www.worldcubeassociation.org/api/v0";
@@ -129,12 +130,46 @@ function backoffMs(attempt: number): number {
 
 // ---------- high-level operations ----------
 
+/** Only the fields the app uses — the raw WCA object is ~25 KB (delegates…). */
+function trimCompetition(
+  c: WcaCompetition & { results_posted_at?: string | null },
+): WcaCompetition & { results_posted_at?: string } {
+  return {
+    id: c.id,
+    name: c.name,
+    city: c.city,
+    country_iso2: c.country_iso2,
+    start_date: c.start_date,
+    end_date: c.end_date,
+    ...(c.results_posted_at ? { results_posted_at: c.results_posted_at } : {}),
+  };
+}
+
 export async function getCompetition(id: string): Promise<WcaCompetition> {
   const { status, data } = await wcaFetch<WcaCompetition>(
     `/competitions/${encodeURIComponent(id)}`,
   );
   if (!data) throw new WcaError(`Competition "${id}" not found`, status || 404);
-  return data;
+  return trimCompetition(data);
+}
+
+/**
+ * The competitions whose results — and so scrambles — the WCA published most
+ * recently, newest first. A competition appears here on its own as soon as
+ * the WCA posts it; nothing is curated.
+ */
+export async function getRecentCompetitions(
+  limit = 12,
+): Promise<(WcaCompetition & { results_posted_at?: string })[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data } = await wcaFetch<
+    Array<WcaCompetition & { results_posted_at?: string | null }>
+  >(`/competitions?end=${today}&sort=-end_date&per_page=80`);
+  return (data ?? [])
+    .filter((c) => Boolean(c.results_posted_at))
+    .sort((a, b) => String(b.results_posted_at).localeCompare(String(a.results_posted_at)))
+    .slice(0, limit)
+    .map(trimCompetition);
 }
 
 export type CompSearch = {
@@ -180,14 +215,7 @@ export async function searchCompetitions(
   // then, and reappear automatically once the WCA posts them.
   const competitions = raw
     .filter((c) => Boolean(c.results_posted_at))
-    .map((c) => ({
-      id: c.id,
-      name: c.name,
-      city: c.city,
-      country_iso2: c.country_iso2,
-      start_date: c.start_date,
-      end_date: c.end_date,
-    }));
+    .map((c) => trimCompetition({ ...c, results_posted_at: null }));
   // hasMore reflects the raw page (pre-filter) so scroll-to-load-more keeps
   // paging even when a page loses a comp or two to the filter.
   return { competitions, hasMore: raw.length === perPage };
@@ -226,6 +254,11 @@ export type Rounds = {
   /** every solvable round of the event, in competition order (first → final) */
   rounds: Round[];
 };
+
+/** Scramble groups in competition order: A..Z, then AA, AB, … */
+function byGroup(a: string, b: string): number {
+  return a.length - b.length || a.localeCompare(b);
+}
 
 /**
  * All solvable rounds of a competition for one event.
@@ -279,7 +312,7 @@ export async function getEventRounds(
     // Build every group's ordered scramble set; keep only the groups that have
     // a full solve count for the format (skips cutoff/partial/extra-only sets).
     const scramblesByGroup: Record<string, string[]> = {};
-    const allGroups = [...new Set(roundScrambles.map((s) => s.group_id))].sort();
+    const allGroups = [...new Set(roundScrambles.map((s) => s.group_id))].sort(byGroup);
     for (const g of allGroups) {
       const scr = roundScrambles
         .filter((s) => s.group_id === g && !s.is_extra)
@@ -287,7 +320,7 @@ export async function getEventRounds(
         .map((s) => s.scramble);
       if (scr.length >= need) scramblesByGroup[g] = scr;
     }
-    const groups = Object.keys(scramblesByGroup).sort();
+    const groups = Object.keys(scramblesByGroup).sort(byGroup);
     if (groups.length === 0) continue;
     // Default to Group "A" when present, otherwise the first group.
     const groupId = groups.includes("A") ? "A" : groups[0];
@@ -332,8 +365,12 @@ export async function getEventRoundScrambles(
   if (!round) {
     return { available: false, reason: "That round isn't available." };
   }
-  const gid =
-    groupId && round.scramblesByGroup[groupId] ? groupId : round.groupId;
+  // An explicitly requested group that this round doesn't have is an error,
+  // never a silent switch to another group's scrambles.
+  if (groupId && !round.scramblesByGroup[groupId]) {
+    return { available: false, reason: `Group ${groupId} isn't available for this round.` };
+  }
+  const gid = groupId ?? round.groupId;
   return {
     available: true,
     roundTypeId: round.roundTypeId,
@@ -396,28 +433,15 @@ export type CompetitionHighlight = {
 export async function getCompetitionHighlight(
   id: string,
 ): Promise<CompetitionHighlight> {
-  const [events, results] = await Promise.all([
+  const [events, rounds] = await Promise.all([
     getCompetitionEvents(id),
-    wcaFetch<WcaResult[]>(
-      `/competitions/${encodeURIComponent(id)}/results?event_id=333`,
-    ),
+    // Shares the per-event cache with the 3x3 rankings.
+    getEventResults(id, "333").catch(() => [] as CompactRound[]),
   ]);
 
-  let winnerName: string | null = null;
-  const rows = (results.data ?? []).filter((r) => r.event_id === "333");
-  if (rows.length > 0) {
-    // The champion is the winner of the LAST round (highest round order).
-    const roundsPresent = [...new Set(rows.map((r) => r.round_type_id))].sort(
-      (a, b) => roundOrder(b) - roundOrder(a),
-    );
-    const finalRows = rows.filter((r) => r.round_type_id === roundsPresent[0]);
-    winnerName =
-      finalRows.find((r) => r.pos === 1)?.name ??
-      finalRows
-        .filter((r) => r.average > 0)
-        .sort((a, b) => a.average - b.average)[0]?.name ??
-      null;
-  }
+  // The champion is the winner of the LAST round (highest round order).
+  const final = rounds[rounds.length - 1];
+  const winnerName = final?.rows.find((r) => r.pos === 1)?.name ?? null;
 
   return { winnerName, eventCount: events.length };
 }
@@ -467,7 +491,17 @@ export async function getWcaPerson(wcaId: string): Promise<WcaPerson> {
   return { name: data.person.name ?? wcaId, records };
 }
 
-export type Competitor = { name: string; averageCs: number };
+/**
+ * One official competitor of a round, in official order. `averageCs` is null
+ * without a valid average (a DNF average, or stopped by a cutoff); `bestCs` is
+ * null without a valid single. `pos` is the WCA position (ties share it).
+ */
+export type Competitor = {
+  name: string;
+  pos: number;
+  averageCs: number | null;
+  bestCs: number | null;
+};
 
 /** The round that came after this one, and how many competitors reached it. */
 export type NextRoundInfo = {
@@ -483,63 +517,156 @@ export type NextRoundInfo = {
 export type RankingData = {
   roundTypeId: string;
   roundName: string;
+  /** everyone who competed in the round (DNS-only rows excluded) */
   totalCompetitors: number;
-  /** valid Ao5 competitors, ascending by average; DNFs excluded from the list
-   *  but counted in totalCompetitors (they rank last, WCA-style) */
+  /** every competitor in official order, including no-average rows */
   competitors: Competitor[];
   fastestAverage: number | null;
   /** null when this is the final round */
   nextRound: NextRoundInfo | null;
 };
 
+type EventResultsPayload = {
+  rounds?: { roundTypeId: string; results?: WcaResult[] }[];
+};
+
+/** The compact per-event results kept in cache: just what ranking needs. */
+type CompactRound = {
+  roundTypeId: string;
+  rows: { name: string; pos: number; average: number; best: number; who: string }[];
+};
+
 /**
- * Real competitors for a given round of an event, ordered the WCA way: valid
- * averages ascending (with names), DNF/no-average competitors excluded from
- * the list but counted in totalCompetitors. The WCA `average` field already
- * reflects the event's format (average-of-5 or mean-of-3), so ranking is
- * uniform. Also reports the next round's size for the "did you make the cut".
+ * Every round's results for one event, from the WCA's per-event endpoint
+ * (about a fifth of the bytes of the whole competition's results; the old
+ * `?event_id=` filter is ignored upstream). Cached compactly, so all the
+ * rounds of an event share one download.
+ */
+function getEventResults(id: string, eventId: string): Promise<CompactRound[]> {
+  return withCache(`event-results:${id}:${eventId}`, TTL.SHORT_MS, async () => {
+    const { data } = await wcaFetch<EventResultsPayload>(
+      `/competitions/${encodeURIComponent(id)}/results/${encodeURIComponent(eventId)}`,
+    );
+    return (data?.rounds ?? [])
+      .map((r) => ({
+        roundTypeId: r.roundTypeId,
+        rows: (r.results ?? [])
+          // A row with no attempt at all (DNS only) didn't compete.
+          .filter((x) => x.best > 0 || x.best === -1)
+          .map((x) => ({
+            name: x.name,
+            pos: x.pos,
+            average: x.average,
+            best: x.best,
+            who: x.wca_id ?? `name:${x.name}`,
+          })),
+      }))
+      .filter((r) => r.rows.length > 0)
+      .sort(
+        (a, b) =>
+          roundOrder(a.roundTypeId) - roundOrder(b.roundTypeId) ||
+          a.roundTypeId.localeCompare(b.roundTypeId),
+      );
+  });
+}
+
+/**
+ * Real competitors for one round, in official WCA order (by position, which
+ * already applies the best-single tie-break and puts no-average rows last),
+ * plus how many advanced to the next round.
+ *
+ * Advancement: the next round's row count undercounts the cut (qualifiers
+ * can decline), so the cut is the worst position among this round's
+ * competitors who actually appear in the next round.
  */
 export async function getEventRanking(
   id: string,
   eventId: string,
   roundTypeId: string,
 ): Promise<RankingData> {
-  const { data } = await wcaFetch<WcaResult[]>(
-    `/competitions/${encodeURIComponent(id)}/results?event_id=${encodeURIComponent(eventId)}`,
-  );
-  const all = (data ?? []).filter((r) => r.event_id === eventId);
+  const rounds = await getEventResults(id, eventId);
+  const idx = rounds.findIndex((r) => r.roundTypeId === roundTypeId);
+  const rows = idx >= 0 ? rounds[idx].rows : [];
 
-  // How many competed in each round — the next round's size is how many
-  // advanced out of this one.
-  const countByRound = new Map<string, number>();
-  for (const r of all) {
-    countByRound.set(r.round_type_id, (countByRound.get(r.round_type_id) ?? 0) + 1);
-  }
-  const orderedRounds = [...countByRound.keys()].sort(
-    (a, b) => roundOrder(a) - roundOrder(b) || a.localeCompare(b),
-  );
-  const idx = orderedRounds.indexOf(roundTypeId);
-  const nextCode = idx >= 0 ? orderedRounds[idx + 1] : undefined;
-  const nextRound: NextRoundInfo | null = nextCode
-    ? {
-        roundTypeId: nextCode,
-        roundName: roundName(nextCode),
-        advancedCount: countByRound.get(nextCode) ?? 0,
-      }
-    : null;
-
-  const rows = all.filter((r) => r.round_type_id === roundTypeId);
   const competitors: Competitor[] = rows
-    .filter((r) => r.average > 0)
-    .map((r) => ({ name: r.name, averageCs: r.average }))
-    .sort((a, b) => a.averageCs - b.averageCs);
+    .map((r) => ({
+      name: r.name,
+      pos: r.pos,
+      averageCs: r.average > 0 ? r.average : null,
+      bestCs: r.best > 0 ? r.best : null,
+    }))
+    .sort((a, b) => a.pos - b.pos);
 
+  const next = idx >= 0 ? rounds[idx + 1] : undefined;
+  let nextRound: NextRoundInfo | null = null;
+  if (next) {
+    const reached = new Set(next.rows.map((r) => r.who));
+    let cut = 0;
+    for (const r of rows) if (reached.has(r.who)) cut = Math.max(cut, r.pos);
+    nextRound = {
+      roundTypeId: next.roundTypeId,
+      roundName: roundName(next.roundTypeId),
+      advancedCount: cut || next.rows.length,
+    };
+  }
+
+  const fastest = competitors.find((c) => c.averageCs !== null);
   return {
     roundTypeId,
     roundName: roundName(roundTypeId),
-    totalCompetitors: rows.length,
+    totalCompetitors: competitors.length,
     competitors,
-    fastestAverage: competitors.length ? competitors[0].averageCs : null,
+    fastestAverage: fastest?.averageCs ?? null,
     nextRound,
   };
+}
+
+// ---------- cutoffs (combined rounds) ----------
+
+/**
+ * A combined round's cutoff: within the first `numberOfAttempts`, one
+ * attempt must be strictly under `attemptResultCs` to go on to the full round.
+ */
+export type Cutoff = { numberOfAttempts: number; attemptResultCs: number };
+
+/** Round codes that can carry a cutoff ("combined" rounds). */
+const COMBINED = new Set(["c", "d", "e", "g", "h"]);
+
+type WcifPublic = {
+  events?: {
+    id: string;
+    rounds?: { id: string; cutoff?: { numberOfAttempts: number; attemptResult: number } | null }[];
+  }[];
+};
+
+/**
+ * The cutoff for one round, from the competition's public WCIF. Only
+ * combined rounds have cutoffs, so only they pay for the WCIF (~5 MB, mostly
+ * the competitor list); what's cached is just the tiny per-round cutoffs.
+ */
+export async function getRoundCutoff(
+  id: string,
+  eventId: string,
+  roundTypeId: string,
+): Promise<Cutoff | null> {
+  if (!COMBINED.has(roundTypeId)) return null;
+  const byEvent = await withCache(`cutoffs:${id}`, TTL.LONG_MS, async () => {
+    const { data } = await wcaFetch<WcifPublic>(
+      `/competitions/${encodeURIComponent(id)}/wcif/public`,
+    );
+    const out: Record<string, (Cutoff | null)[]> = {};
+    for (const e of data?.events ?? []) {
+      out[e.id] = (e.rounds ?? []).map((r) =>
+        r.cutoff && r.cutoff.attemptResult > 0
+          ? { numberOfAttempts: r.cutoff.numberOfAttempts, attemptResultCs: r.cutoff.attemptResult }
+          : null,
+      );
+    }
+    return out;
+  });
+  const rounds = byEvent[eventId] ?? [];
+  // WCIF numbers rounds r1..rN: finals are the last; others by their order.
+  const order = roundOrder(roundTypeId);
+  const idx = roundTypeId === "c" ? rounds.length - 1 : order - 1;
+  return idx >= 0 ? (rounds[idx] ?? null) : null;
 }

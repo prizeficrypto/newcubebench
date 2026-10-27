@@ -3458,3 +3458,104 @@
   font-weight: 500;
   color: var(--accent);
 }
+
+/* ---------- "Just published" (newest WCA competitions) ---------- */
+
+.picker__recent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.picker__recent-row {
+  position: relative;
+}
+
+.picker__posted {
+  position: absolute;
+  right: 44px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+@media (max-width: 560px) {
+  .picker__posted {
+    display: none;
+  }
+}
+
+/* ---------- WCA account (Settings, sign-up) ---------- */
+
+.settings__wca {
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.settings__wca a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.settings__wca-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.gate__wca {
+  width: 100%;
+}
+
+/* ---------- ad slots (render only when AdSense is configured) ---------- */
+
+.adslot {
+  width: 100%;
+  max-width: 970px;
+  margin: 28px auto 0;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.adslot__label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ---------- privacy policy ---------- */
+
+.privacy {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 680px;
+}
+
+.privacy__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.privacy__section p {
+  margin: 0;
+  line-height: 1.65;
+}
+
+.privacy__title {
+  font-size: 18px;
+}
+
+.privacy a {
+  color: var(--accent);
+}
+
+.solving__cutoff {
+  font-size: 13px;
+}

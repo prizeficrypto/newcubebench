@@ -21,7 +21,10 @@ if (!url) {
 
 export const sql = postgres(url, {
   prepare: false, // required for Supabase's transaction pooler (pgbouncer)
-  max: 5, // bounded pool — small instance, avoid exhausting Postgres
+  // Small per-instance pool: on serverless many instances run at once, and
+  // the pooler's client-connection budget is shared by all of them.
+  max: Number(process.env.DB_POOL_MAX ?? 3) || 3,
   idle_timeout: 20,
   connect_timeout: 10,
+  onnotice: () => {}, // no server NOTICE spam in the logs
 });

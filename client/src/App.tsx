@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import {
   BrowserRouter,
   Link,
@@ -14,71 +14,106 @@ import { NavBar } from "./components/NavBar.tsx";
 import { AppShell } from "./components/AppShell.tsx";
 import { Onboarding } from "./components/Onboarding.tsx";
 import { Mark } from "./components/Mark.tsx";
-import Home from "./pages/Home.tsx";
-import Simulator from "./pages/Simulator.tsx";
-import SkillTimer from "./pages/SkillTimer.tsx";
-import Pricing from "./pages/Pricing.tsx";
-import Settings from "./pages/Settings.tsx";
-import Feedback from "./pages/Feedback.tsx";
+import Timer from "./pages/Timer.tsx";
+
+// The timer is the front door and ships in the main bundle; everything else
+// loads on demand so a first visit paints the timer as fast as possible.
+const Home = lazy(() => import("./pages/Home.tsx"));
+const Simulator = lazy(() => import("./pages/Simulator.tsx"));
+const Settings = lazy(() => import("./pages/Settings.tsx"));
+const Feedback = lazy(() => import("./pages/Feedback.tsx"));
+const Profile = lazy(() => import("./pages/Profile.tsx"));
+const Friends = lazy(() => import("./pages/Friends.tsx"));
+const Privacy = lazy(() => import("./pages/Privacy.tsx"));
+const SharedResult = lazy(() => import("./pages/SharedResult.tsx"));
+const WcaCallback = lazy(() => import("./pages/WcaCallback.tsx"));
 
 /**
- * Two worlds:
- *   /        — marketing landing page (no app tabs, just "Launch App")
- *   /app/*   — the product, behind onboarding (account + profile), with its
- *              own navigation: Competitions, Skill Timer, Pricing.
- * Old top-level routes redirect into the app.
+ * Routes:
+ *   /                 → the timer (the app is the front door)
+ *   /app              — the timer
+ *   /app/competitions — the competition simulator
+ *   /app/friends, /app/u/:handle, /app/r/:id — social
+ *   /app/settings, /app/feedback
+ *   /welcome          — the marketing page ("About" in the nav)
+ *   /join             — sign up / sign in
+ *   /auth/wca         — WCA OAuth redirect target
+ *   /privacy          — privacy policy
+ * Old paths redirect.
  */
 export default function App() {
   return (
     <AuthProvider>
       <LanguageProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* The app is the front door now: land straight in the Simulator.
-              The marketing page moves to /welcome, reached from a nav button. */}
-          <Route path="/" element={<Navigate to="/app" replace />} />
-          <Route
-            path="/welcome"
-            element={
-              <>
-                <NavBar />
-                <main className="app">
-                  <Home />
-                </main>
-              </>
-            }
-          />
+        <BrowserRouter>
+          <Suspense fallback={<PageLoading />}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/app" replace />} />
+              <Route
+                path="/welcome"
+                element={
+                  <>
+                    <NavBar />
+                    <main className="app">
+                      <Home />
+                    </main>
+                  </>
+                }
+              />
 
-          {/* Sign-up / sign-in screen. Guests are sent here from the app's
-              "create an account to do more" walls. */}
-          <Route path="/join" element={<JoinScreen />} />
+              {/* Sign-up / sign-in screen. */}
+              <Route path="/join" element={<JoinScreen />} />
+              <Route path="/auth/wca" element={<WcaCallback />} />
+              <Route
+                path="/privacy"
+                element={
+                  <>
+                    <NavBar />
+                    <main className="app">
+                      <Privacy />
+                    </main>
+                  </>
+                }
+              />
 
-          <Route path="/app" element={<AppShell />}>
-            <Route index element={<Simulator />} />
-            <Route path="skill-timer" element={<SkillTimer />} />
-            <Route path="pricing" element={<Pricing />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="feedback" element={<Feedback />} />
-          </Route>
+              <Route path="/app" element={<AppShell />}>
+                <Route index element={<Timer />} />
+                <Route path="competitions" element={<Simulator />} />
+                <Route path="friends" element={<Friends />} />
+                <Route path="u/:handle" element={<Profile />} />
+                <Route path="r/:id" element={<SharedResult />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="feedback" element={<Feedback />} />
+                <Route path="skill-timer" element={<Navigate to="/app" replace />} />
+                <Route path="pricing" element={<Navigate to="/app" replace />} />
+              </Route>
 
-          {/* legacy paths from the tabbed layout */}
-          <Route path="/simulator" element={<Navigate to="/app" replace />} />
-          <Route path="/skill-timer" element={<Navigate to="/app/skill-timer" replace />} />
-          <Route path="/pricing" element={<Navigate to="/app/pricing" replace />} />
+              {/* legacy paths from the tabbed layout */}
+              <Route path="/simulator" element={<Navigate to="/app/competitions" replace />} />
+              <Route path="/skill-timer" element={<Navigate to="/app" replace />} />
+              <Route path="/pricing" element={<Navigate to="/app" replace />} />
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Analytics />
-      </BrowserRouter>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+          <Analytics />
+        </BrowserRouter>
       </LanguageProvider>
     </AuthProvider>
   );
 }
 
+function PageLoading() {
+  return (
+    <div className="gate-loading">
+      <div className="spinner" />
+    </div>
+  );
+}
+
 /**
  * The account screen (sign up / sign in, then the quick profile). Once the
- * user is signed in with a profile, bounce them into the app. Guests reach
- * this from the "create an account to do more" prompts.
+ * user is signed in with a profile, bounce them into the app.
  */
 function JoinScreen() {
   const { user } = useAuth();
@@ -90,7 +125,7 @@ function JoinScreen() {
     <>
       <header className="nav">
         <nav className="nav__inner container">
-          <Link to="/" className="nav__wordmark">
+          <Link to="/app" className="nav__wordmark">
             <Mark className="nav__mark" size={15} />
             Cube Bench
           </Link>
@@ -113,15 +148,14 @@ function NotFound() {
           <span className="eyebrow">404</span>
           <h1 className="title">This page doesn't exist.</h1>
           <p className="muted gate__sub">
-            Maybe the scramble was bad. The app and the landing page are still
-            where they always were.
+            Maybe the scramble was bad. The timer is still where it always was.
           </p>
           <div className="notfound__actions">
             <Link className="btn" to="/app">
-              Launch App
+              Open the timer
             </Link>
-            <Link className="btn btn--ghost" to="/">
-              Go home
+            <Link className="btn btn--ghost" to="/welcome">
+              About Cube Bench
             </Link>
           </div>
         </div>

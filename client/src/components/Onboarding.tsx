@@ -65,7 +65,9 @@ export function Onboarding() {
 
 function Account() {
   const { t } = useT();
-  const { googleAvailable, signInGoogle, signUpEmail, signInEmail } = useAuth();
+  const { googleAvailable, wcaAvailable, startWca, signInGoogle, signUpEmail, signInEmail } =
+    useAuth();
+  const [wcaError, setWcaError] = useState<string | null>(null);
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
   const canGoogle = googleAvailable && clientId.length > 0;
 
@@ -143,12 +145,31 @@ function Account() {
         </p>
       </Item>
 
-      {canGoogle && (
+      {wcaAvailable && (
+        <Item index={++i}>
+          <button
+            type="button"
+            className="btn btn--secondary gate__wca"
+            onClick={() =>
+              startWca("signin").catch((e) =>
+                setWcaError(e instanceof Error ? e.message : t("Couldn't reach the WCA, try again.")),
+              )
+            }
+          >
+            {t("Continue with your WCA account")}
+          </button>
+          {wcaError && <p className="gate__error">{wcaError}</p>}
+        </Item>
+      )}
+
+      {(canGoogle || wcaAvailable) && (
         <>
-          <Item index={++i}>
-            <div ref={googleRef} className="gate__google" />
-            {googleError && <p className="gate__error">{googleError}</p>}
-          </Item>
+          {canGoogle && (
+            <Item index={++i}>
+              <div ref={googleRef} className="gate__google" />
+              {googleError && <p className="gate__error">{googleError}</p>}
+            </Item>
+          )}
           <Item index={++i}>
             <div className="gate__divider">
               <span>{t("or")}</span>

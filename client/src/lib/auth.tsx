@@ -17,18 +17,23 @@ import { store } from "./store.ts";
 
 export type User = {
   id: string;
-  provider: "google" | "email";
+  provider: "google" | "email" | "wca";
   email: string;
   name: string;
-  /** true while trialing or subscribed */
-  pro: boolean;
-  /** epoch ms — when set and in the future, they're on the free "first 100" month */
-  promoUntil?: number;
   profile: {
     displayName?: string;
     avg333?: string;
+    /** verified through WCA sign-in; never typed by the user */
+    wcaId?: string;
+    wcaName?: string;
+    wcaAvatarUrl?: string;
+    wcaCountry?: string;
+    wcaVerifiedAt?: number;
   };
 };
+
+/** sessionStorage key: where to return after the WCA round trip. */
+export const WCA_RETURN_KEY = "cb_wca_return";
 
 const TOKEN_KEY = "cb_token";
 
@@ -37,17 +42,18 @@ type AuthState = {
   /** true until the stored token has been checked against the server */
   loading: boolean;
   googleAvailable: boolean;
-  billingAvailable: boolean;
+  wcaAvailable: boolean;
+  /** leave for the WCA to sign in, or to connect the signed-in account */
+  startWca: (mode: "signin" | "connect") => Promise<void>;
+  /** finish the WCA round trip; returns the mode and whether a new account was made */
+  finishWca: (code: string, state: string) => Promise<{ mode: "signin" | "connect"; created?: boolean }>;
+  disconnectWca: () => Promise<void>;
   signInGoogle: (credential: string) => Promise<void>;
   signUpEmail: (email: string, password: string, name: string) => Promise<void>;
   signInEmail: (email: string, password: string) => Promise<void>;
   saveProfile: (profile: { displayName?: string; avg333?: string }) => Promise<void>;
-  /** refresh the current user from the server (after returning from Stripe) */
+  /** refresh the current user from the server */
   refresh: () => Promise<void>;
-  /** redirect to Stripe Checkout for Pro */
-  startCheckout: (plan?: "monthly" | "annual") => Promise<void>;
-  /** redirect to the Stripe Billing Portal to manage/cancel */
-  openPortal: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -75,21 +81,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [googleAvailable, setGoogleAvailable] = useState(false);
-  const [billingAvailable, setBillingAvailable] = useState(false);
+  const [wcaAvailable, setWcaAvailable] = useState(false);
 
   // Restore session + discover which sign-in methods the server supports.
+  // The two requests run in parallel; nothing in the app waits on the config.
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const cfg = await fetch("/api/auth/config").then((r) => r.json());
-        if (!cancelled) {
-          setGoogleAvailable(Boolean(cfg?.googleAvailable));
-          setBillingAvailable(Boolean(cfg?.billingAvailable));
-        }
-      } catch {
+    fetch("/api/auth/config")
+      .then((r) => r.json())
+      .then((cfg) => {
+        if (cancelled) return;
+        setGoogleAvailable(Boolean(cfg?.googleAvailable));
+        setWcaAvailable(Boolean(cfg?.wcaAvailable));
+      })
+      .catch(() => {
         /* config is advisory; email auth still works */
-      }
+      });
+    (async () => {
       const token = store.get(TOKEN_KEY);
       if (!token) {
         if (!cancelled) setLoading(false);
@@ -179,27 +187,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const startCheckout = useCallback(
-    async (plan: "monthly" | "annual" = "monthly") => {
-      const token = store.get(TOKEN_KEY) ?? "";
-      const { url } = await postJson<{ url: string }>(
-        "/api/billing/checkout",
-        { plan },
-        token,
-      );
-      window.location.href = url;
-    },
-    [],
-  );
+  const startWca = useCallback(async (mode: "signin" | "connect") => {
+    const token = store.get(TOKEN_KEY) ?? undefined;
+    const { url } = await postJson<{ url: string }>("/api/auth/wca/start", { mode }, token);
+    try {
+      sessionStorage.setItem(WCA_RETURN_KEY, mode === "connect" ? "/app/settings" : "/app");
+    } catch {
+      /* the default return target is fine */
+    }
+    window.location.assign(url);
+  }, []);
 
-  const openPortal = useCallback(async () => {
+  const finishWca = useCallback(async (code: string, state: string) => {
+    const token = store.get(TOKEN_KEY) ?? undefined;
+    const data = await postJson<{
+      mode: "signin" | "connect";
+      user: User;
+      token?: string;
+      created?: boolean;
+    }>("/api/auth/wca/finish", { code, state }, token);
+    if (data.token) store.set(TOKEN_KEY, data.token);
+    setUser(data.user);
+    return { mode: data.mode, created: data.created };
+  }, []);
+
+  const disconnectWca = useCallback(async () => {
     const token = store.get(TOKEN_KEY) ?? "";
-    const { url } = await postJson<{ url: string }>(
-      "/api/billing/portal",
-      {},
-      token,
-    );
-    window.location.href = url;
+    const data = await postJson<{ user: User }>("/api/auth/wca/disconnect", {}, token);
+    setUser(data.user);
   }, []);
 
   const signOut = useCallback(async () => {
@@ -221,14 +236,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         loading,
         googleAvailable,
-        billingAvailable,
+        wcaAvailable,
+        startWca,
+        finishWca,
+        disconnectWca,
         signInGoogle,
         signUpEmail,
         signInEmail,
         saveProfile,
         refresh,
-        startCheckout,
-        openPortal,
         signOut,
       }}
     >

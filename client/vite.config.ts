@@ -20,6 +20,12 @@ export default defineConfig({
   },
   build: {
     target: "es2022",
+    // Required for real scrambles in production: Vite's modulepreload helper
+    // gets compiled into cubing.js's search-worker chunk, and it touches
+    // `document`, which doesn't exist inside a Worker. The worker then fails
+    // to start and every scramble silently falls back to random moves.
+    // Dev mode never shows this (cubing is served unbundled there).
+    modulePreload: false,
   },
   server: {
     port: 5173,

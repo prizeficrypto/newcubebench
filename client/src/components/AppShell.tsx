@@ -1,25 +1,20 @@
+import { Suspense } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../lib/auth.tsx";
+import { useCloudSync } from "../lib/cloudSync.ts";
 import { Mark } from "./Mark.tsx";
 import { useT } from "../lib/i18n.tsx";
 
 /**
- * Everything behind "Launch App". Open to guests — they can run the featured
- * competitions and the regular timer without an account; the "create an
- * account to do more" walls send them to /join. Signed-in users get their
- * profile chip and sign-out.
+ * The app frame: top nav + the current page. Open to everyone — the timer and
+ * every competition work without an account. Rendering never waits on the
+ * session check: the timer paints immediately and the account chip fills in
+ * once we know who you are.
  */
 export function AppShell() {
   const { user, loading, signOut } = useAuth();
   const { t } = useT();
-
-  if (loading) {
-    return (
-      <div className="gate-loading">
-        <div className="spinner" />
-      </div>
-    );
-  }
+  useCloudSync();
 
   const shownName = user ? (user.profile.displayName ?? user.name) : "";
   const initials = shownName
@@ -28,6 +23,9 @@ export function AppShell() {
     .slice(0, 2)
     .map((w) => w[0]!.toUpperCase())
     .join("");
+
+  const link = ({ isActive }: { isActive: boolean }) =>
+    `nav__link${isActive ? " is-active" : ""}`;
 
   return (
     <>
@@ -38,42 +36,28 @@ export function AppShell() {
             Cube Bench
           </NavLink>
           <div className="nav__links">
-            <NavLink
-              to="/app"
-              end
-              className={({ isActive }) => `nav__link${isActive ? " is-active" : ""}`}
-            >
-              {t("Competitions")}
-            </NavLink>
-            <NavLink
-              to="/app/skill-timer"
-              className={({ isActive }) => `nav__link${isActive ? " is-active" : ""}`}
-            >
+            <NavLink to="/app" end className={link}>
               {t("Timer")}
             </NavLink>
-            <NavLink
-              to="/app/pricing"
-              className={({ isActive }) => `nav__link${isActive ? " is-active" : ""}`}
-            >
-              {t("Pricing")}
+            <NavLink to="/app/competitions" className={link}>
+              {t("Competitions")}
             </NavLink>
-            <NavLink
-              to="/app/settings"
-              className={({ isActive }) => `nav__link${isActive ? " is-active" : ""}`}
-            >
+            <NavLink to="/app/friends" className={link}>
+              {t("Friends")}
+            </NavLink>
+            <NavLink to="/app/settings" className={link}>
               {t("Settings")}
             </NavLink>
             <Link to="/welcome" className="nav__link">
               {t("About")}
             </Link>
-            {user ? (
+            {loading ? null : user ? (
               <>
                 <span className="nav__user-chip" title={user.email}>
                   <span className="nav__avatar" aria-hidden="true">
                     {initials || "?"}
                   </span>
                   <span className="nav__username tertiary">{shownName}</span>
-                  {user.pro && <span className="nav__pro">Pro</span>}
                 </span>
                 <button
                   className="nav__link nav__signout"
@@ -84,19 +68,30 @@ export function AppShell() {
               </>
             ) : (
               <Link to="/join" className="btn nav__join">
-                {t("Create account")}
+                {t("Sign in")}
               </Link>
             )}
           </div>
         </nav>
       </header>
       <main className="app">
-        <Outlet />
+        <Suspense
+          fallback={
+            <div className="gate-loading">
+              <div className="spinner" />
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
       <footer className="app-foot">
         <NavLink to="/app/feedback" className="app-foot__link">
           {t("Report a bug or suggest something")}
         </NavLink>
+        <Link to="/privacy" className="app-foot__link">
+          {t("Privacy")}
+        </Link>
       </footer>
     </>
   );

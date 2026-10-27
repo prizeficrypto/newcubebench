@@ -6,6 +6,9 @@ import assert from "node:assert/strict";
 import {
   attemptCs,
   attemptEffectiveMs,
+  bestSingleCs,
+  missedCutoff,
+  placeResult,
   formatAttempt,
   formatCentiseconds,
   formatMs,
@@ -224,6 +227,83 @@ check("stage breakdown finds the slowest stage and its share", () => {
   assert.equal(b.totals.f2l, 4000);
   assert.equal(b.grandTotalMs, 8000);
   assert.equal(Math.round(b.slowestShare * 100), 50);
+});
+
+// ---------- WCA truncation, 10-minute rules, tie-breaks (Regulations 9f1, 9f2, 9f14, 9f15) ----------
+
+const at = (rawMs: number, plus2 = false, dnf = false): Attempt => ({ rawMs, plus2, dnf });
+
+check("attempts truncate to the hundredth, never round up (9f1)", () => {
+  assert.equal(attemptCs(at(7995.6)), 799);
+  assert.equal(attemptCs(at(12349)), 1234);
+  assert.equal(attemptCs(at(12340, true)), 1434);
+});
+
+check("attempts of 10:00.00 and over truncate to whole seconds (9f2)", () => {
+  assert.equal(attemptCs(at(628_888)), 62_800);
+  assert.equal(attemptCs(at(599_999)), 59_999);
+});
+
+check("means of 10 minutes and over round to the second (9f2)", () => {
+  // 10:23.456, 10:30.123, 10:28.888 → 10:23, 10:30, 10:28 → mean 10:27.00
+  const mean = wcaAverageFromAttempts([at(623_456), at(630_123), at(628_888)], "mo3");
+  assert.equal(mean, 62_700);
+});
+
+check("the bug-hunt case: truncation turns an 8.00 average into 7.99", () => {
+  const a = [at(5004.6), at(7995.6), at(7995.6), at(8004.6), at(9000)];
+  assert.equal(wcaAo5FromAttempts(a), 799);
+});
+
+const field = [
+  { averageCs: 798, bestCs: 600 },
+  { averageCs: 799, bestCs: 566 },
+  { averageCs: 799, bestCs: 636 },
+  { averageCs: 799, bestCs: 734 },
+  { averageCs: 799, bestCs: 739 },
+  { averageCs: 800, bestCs: 700 },
+  { averageCs: null, bestCs: 650 },
+  { averageCs: null, bestCs: null },
+];
+
+check("equal averages are broken by best single (9f14)", () => {
+  // average 7.99 with best 7.99: behind all four 7.99s (their bests are faster)
+  assert.deepEqual(placeResult({ averageCs: 799, bestCs: 799 }, field), { placement: 6, total: 9 });
+  // average 7.99 with best 6.00: ahead of three of them
+  assert.deepEqual(placeResult({ averageCs: 799, bestCs: 600 }, field), { placement: 3, total: 9 });
+});
+
+check("an identical average and best shares the position (9f15)", () => {
+  assert.deepEqual(placeResult({ averageCs: 799, bestCs: 636 }, field).placement, 3);
+});
+
+check("a DNF average places after every valid average, by best single", () => {
+  assert.deepEqual(placeResult({ averageCs: null, bestCs: 700 }, field), { placement: 8, total: 9 });
+  assert.deepEqual(placeResult({ averageCs: null, bestCs: 600 }, field).placement, 7);
+  assert.deepEqual(placeResult({ averageCs: null, bestCs: null }, field).placement, 8);
+});
+
+check("the user counts in the field (no more '17th of 16')", () => {
+  const sixteen = Array.from({ length: 16 }, (_, i) => ({ averageCs: 700 + i, bestCs: 600 }));
+  assert.deepEqual(placeResult({ averageCs: 900, bestCs: 800 }, sixteen), { placement: 17, total: 17 });
+});
+
+check("bestSingleCs ignores DNFs", () => {
+  assert.equal(bestSingleCs([at(9000, false, true), at(10_000), at(8_000, true)]), 1000);
+  assert.equal(bestSingleCs([at(9000, false, true)]), null);
+});
+
+check("cutoff: one of the first N attempts must be strictly under it (9g)", () => {
+  const six = { numberOfAttempts: 1, attemptResultCs: 18_000 }; // WC2023 6x6: under 3:00.00
+  assert.equal(missedCutoff([at(185_000)], six), true);
+  assert.equal(missedCutoff([at(179_990)], six), false);
+  assert.equal(missedCutoff([at(180_000)], six), true); // exactly 3:00.00 is not under
+  assert.equal(missedCutoff([at(170_000, false, true)], six), true); // a DNF never makes it
+  assert.equal(missedCutoff([at(178_500, true)], six), true); // +2 counts: 3:00.50
+  const pyram = { numberOfAttempts: 2, attemptResultCs: 2000 };
+  assert.equal(missedCutoff([at(25_000)], pyram), false); // not decided until 2 attempts
+  assert.equal(missedCutoff([at(25_000), at(19_000)], pyram), false);
+  assert.equal(missedCutoff([at(25_000), at(21_000)], pyram), true);
 });
 
 console.log(`\n${passed} checks passed.`);

@@ -10,7 +10,8 @@ import { useT } from "../lib/i18n.tsx";
  *   competition (inspection on) — idle → press to start 15s WCA inspection →
  *     hold to arm → release to start the solve → press to stop. The judge's
  *     "8 seconds" and "12 seconds" calls show as the count passes those marks;
- *     starting the solve after 15s adds a +2 penalty (no 17s DNF tier).
+ *     starting the solve after 15s adds a +2 penalty, after 17s it's a DNF
+ *     (WCA Regulation A3d1).
  *
  * Starting a solve uses the real speedcubing hold-to-start feel: hold the
  * spacebar (or the screen) and the time turns red, then green once it is armed;
@@ -20,6 +21,8 @@ type Phase = "idle" | "inspecting" | "running" | "done";
 type Hold = "none" | "holding" | "armed";
 
 const INSPECTION_MS = 15_000;
+/** past this, starting the solve is a DNF instead of +2 */
+const INSPECTION_DNF_MS = 17_000;
 /** how long the spacebar/screen must be held before the timer arms */
 const HOLD_TO_ARM_MS = 450;
 
@@ -51,7 +54,10 @@ export function CompTimer({
 
   const solveStartRef = useRef<number | null>(null);
   const inspectionStartRef = useRef<number | null>(null);
+  /** +2 from starting after 15 s of inspection (automatic, not editable) */
   const penaltyRef = useRef(false);
+  /** DNF from starting after 17 s of inspection */
+  const lateDnfRef = useRef(false);
   const rafRef = useRef<number | null>(null);
   const inspTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   /** when the solve was stopped — guards the stop key/tap from immediately
@@ -98,6 +104,7 @@ export function CompTimer({
     solveStartRef.current = null;
     inspectionStartRef.current = null;
     penaltyRef.current = false;
+    lateDnfRef.current = false;
   }, [setHoldState]);
 
   // Full reset when the scramble/solve changes.
@@ -132,10 +139,12 @@ export function CompTimer({
     setHoldState("none");
     // Penalty decided at the exact moment the solve starts.
     const now = performance.now();
-    penaltyRef.current =
+    const inspected =
       inspection && inspectionStartRef.current != null
-        ? now - inspectionStartRef.current > INSPECTION_MS
-        : false;
+        ? now - inspectionStartRef.current
+        : 0;
+    lateDnfRef.current = inspected > INSPECTION_DNF_MS;
+    penaltyRef.current = !lateDnfRef.current && inspected > INSPECTION_MS;
     solveStartRef.current = now;
     setElapsed(0);
     setPhase("running");
@@ -166,7 +175,7 @@ export function CompTimer({
     stoppedAtRef.current = now;
     const rawMs = now - start;
     setElapsed(rawMs);
-    setResult({ rawMs, plus2: penaltyRef.current });
+    setResult({ rawMs, plus2: penaltyRef.current, dnf: lateDnfRef.current || undefined });
     setPhase("done");
   }, []);
 
@@ -302,7 +311,7 @@ export function CompTimer({
             <div
               className={`timer__time mono inspect${over ? " is-over" : ""}${holdCls}`}
             >
-              {over ? "+2" : inspLeft}
+              {inspElapsed > INSPECTION_DNF_MS ? "DNF" : over ? "+2" : inspLeft}
             </div>
             <div className="timer__hint" role="status" aria-live="polite">
               {hold !== "none" ? (
@@ -311,7 +320,9 @@ export function CompTimer({
                 <>
                   {call && <span className="inspect__call">{call}</span>}
                   {over
-                    ? t("Over 15 seconds. This solve is +2. Start when ready.")
+                    ? inspElapsed > INSPECTION_DNF_MS
+                      ? t("Over 17 seconds. This solve is a DNF.")
+                      : t("Over 15 seconds. This solve is +2. Start when ready.")
                     : touch
                       ? t("Inspecting. Hold, release to start your solve.")
                       : t("Inspecting. Hold space, release to start your solve.")}

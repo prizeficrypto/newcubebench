@@ -1,157 +1,116 @@
 # Cube Bench
 
-Find out where you'd actually place. Cube Bench turns solo speedcubing
-practice into a real benchmark: solve the actual scrambles from real WCA
-competitions and see where your average would have landed against the people
-who were there.
+A free speedcubing timer and WCA competition simulator. Open the site and
+you're on the timer; the simulator lets you solve the real scrambles from a
+real WCA round and see where you'd have placed against the people who were
+there. Supported by ads (Google AdSense); no paid plans.
 
-## Pages
+## What's in it
 
-- **Home** — landing page: the pitch, a real example result, how it works.
-- **Simulator** — pick a real past competition, do the 5 first-round 3×3
-  solves on its real scrambles with a standard hold-to-start timer and 15s
-  WCA inspection (+2 for a late start), then see your WCA average of 5 ranked
-  against the official field.
-- **Skill Timer** — unlimited stage-split practice: spacebar taps mark the end
-  of cross / F2L / OLL / PLL; a session summary shows which stage is eating
-  your time. Scrambles are random-state via cubing.js.
-- **Pricing** — Free (three featured competitions + full single-session Skill
-  Timer) and Pro, $3/month with the first month free (full WCA library +
-  progress analytics). Pro is early-access only: an email capture, no payment
-  taken anywhere. Gating is visual only in this version (no accounts).
+- **Timer** (`/app`, the front door) — csTimer-class practice timer:
+  sessions per puzzle (all WCA events + "no scramble"), real random-state WCA
+  scrambles (cubing.js) with history and your own scrambles, hold-to-start,
+  WCA inspection (+2 after 15 s, DNF after 17 s) with spoken 8 s / 12 s calls
+  (choose a male/female/system voice, volume, or a beep), multi-phase splits,
+  focus mode, OK/+2/DNF and comments per solve, csTimer's keyboard shortcuts,
+  typed times, **StackMat** (audio jack) and **GAN Smart Timer** (Bluetooth,
+  beta) input, full stats (mo3/ao5/ao12/… current + best, csTimer trimming,
+  WCA rounding), a time list that stays fast at 10k+ solves, tools (scramble
+  image, trend, distribution, scramble generator, metronome), and
+  import/export (csTimer JSON + CSV, Twisty Timer, Cubic Timer, plain lists).
+- **Competitions** (`/app/competitions`) — pick any past WCA competition
+  (a "Just published" list surfaces new ones automatically), an event and a
+  round, solve its official scrambles, and get placed by WCA ranking rules.
+- **Social** (with a free account) — times saved to your account across
+  devices, an opt-in public profile with PBs, following friends + a friends
+  leaderboard, Cube Bench leaderboards per simulated round, shareable results.
+- **WCA account** — sign in with, or connect, a WCA account (OAuth) to verify
+  your WCA ID.
 
 ## Architecture
 
 ```
-client/   React + Vite + TS SPA (react-router: /, /simulator, /skill-timer, /pricing)
-server/   Express proxy for the WCA public API + early-access store
+client/   React + Vite + TS SPA
+server/   Express API: WCA data proxy, accounts, social, feedback
+api/      Vercel serverless entry (wraps the bundled Express app)
 ```
 
-The browser only talks to the Express backend. The backend:
+Server routers live in `server/src/routes/` (`data`, `account`, `social`,
+`feedback`); `server/src/index.ts` composes them.
 
-- proxies the WCA API and handles CORS,
-- does the scramble **grouping and round-sorting** (the WCA scrambles endpoint
-  returns one flat list per competition),
-- shapes ranking data (WCA ordering, DNFs counted in total but sorted last),
-- caches responses (long TTL for immutable scrambles/results, short for lists),
-- uses bounded timeouts + retries (exponential backoff + jitter) and distinct
-  `/health` (liveness) and `/ready` (readiness) probes,
-- `POST /api/early-access` appends validated, deduped emails to
-  `server/data/early-access.jsonl`.
+- **WCA data** is fetched from the public WCA API, trimmed, cached in memory,
+  and sent with `Cache-Control: s-maxage` so Vercel's CDN serves repeat
+  requests without running the function. Public data requests carry no
+  Authorization header (that would bypass the CDN).
+- **Practice sessions** live in IndexedDB (`client/src/lib/timer/storage.ts`);
+  signed-in users sync them in hashed 200-solve chunks so only changed chunks
+  upload (`client/src/lib/cloudSync.ts`, `server/src/social/`).
+- **Translations** (fr/ko/es) load on demand; English visitors never
+  download them.
 
 ### Correctness-critical logic
 
-- `client/src/lib/cubing.ts` — WCA math, pure and unit-tested:
-  - **Ao5**: drop exactly one best and one worst, mean the middle three —
-    never a plain mean; tie-safe via sort + slice.
-  - **Attempts are quantized to centiseconds first** (like every official WCA
-    result), then best/worst selection, averaging, and ranking all run in cs,
-    so the displayed average always agrees with the displayed attempt times.
-  - **+2 penalty** (inspection over 15.00s) is added to that attempt *before*
-    best/worst selection and averaging; penalized results display as `14.34+`.
-- `server/src/roundTypes.ts` — maps WCA `round_type_id` codes to sort order;
-  first round is identified via this map, never assumed to be code `"1"`.
-- `server/src/wca.ts` — scramble grouping: filter event, bucket by
-  `(round_type_id, group_id)`, take one group, drop `is_extra`, order by
-  `scramble_num`.
+- `client/src/lib/cubing.ts` — simulator scoring per WCA Regulations: attempts
+  truncated to the hundredth (whole seconds at 10:00+), Ao5 drops one best and
+  one worst, mean of 3 for 6x6/7x7, averages rounded (to the second at 10:00+),
+  placement by average then best single, ties share a position, DNF averages
+  ranked after every valid average by best single.
+- `client/src/lib/timer/stats.ts` — practice stats with csTimer's definitions
+  (5% trimming, DNF rules) and WCA rounding.
+- `client/src/lib/timer/engine.ts` — the timer state machine (pure, tested).
 
-### Review subagents
+## Configuration
 
-`.claude/agents/` defines two read-only reviewers used during development:
-`cube-reviewer` (WCA math, penalties, grouping, timing) and `design-reviewer`
-(blunt design critic hunting template tells and mobile breakage).
+Server (`server/.env`, see `server/.env.example`):
 
-## Accounts and Google sign-in
+| Variable | Needed for |
+|---|---|
+| `DATABASE_URL` | **Required.** Supabase transaction-pooler URL (port 6543) |
+| `APP_URL` | Public URL (WCA sign-in redirect) |
+| `GOOGLE_CLIENT_ID` | Google sign-in |
+| `WCA_CLIENT_ID`, `WCA_CLIENT_SECRET` | WCA sign-in / connect |
+| `ADSENSE_PUBLISHER_ID` | Serves `/ads.txt` (e.g. `pub-123…`) |
+| `CRON_SECRET` | Protects the daily database keep-alive |
 
-The app is gated behind onboarding: Launch App → create an account (Google or
-email) → quick profile → competitions. Email accounts are passwordless in this
-MVP (name + email, stated plainly in the UI); users persist to
-`server/data/users.jsonl`, sessions are in-memory.
+Client (`client/.env`, see `client/.env.example`): `VITE_GOOGLE_CLIENT_ID`,
+`VITE_ADSENSE_CLIENT` (`ca-pub-…`) and `VITE_ADSENSE_SLOT_*` ad-unit ids.
+Anything unset simply stays off (no fake buttons, no empty ad boxes).
 
-**Google sign-in is real** (Google Identity Services, ID token verified
-server-side with `google-auth-library`) and switches on when a client ID is
-configured:
+### One-time setup
 
-1. Go to https://console.cloud.google.com/apis/credentials (create a project
-   if needed).
-2. Configure the OAuth consent screen (External, app name, your email).
-3. Create Credentials → OAuth client ID → **Web application**.
-4. Add `http://localhost:5173` to **Authorized JavaScript origins**.
-5. Copy the client ID into both env files:
-   - `client/.env` → `VITE_GOOGLE_CLIENT_ID=<your-id>`
-   - `server/.env` → `GOOGLE_CLIENT_ID=<your-id>`
-6. Restart both dev servers.
-
-Until then, the Google button doesn't render (no fake auth); email + password
-accounts work immediately.
-
-### Ways to sign in
-
-- **Email + password** — standard sign up / sign in. Passwords are hashed
-  (scrypt, per-user salt); the hash never leaves the server. Works with no
-  configuration.
-- **Google** — see above.
-
-## Pro subscription (Stripe)
-
-Pro is a real Stripe subscription — **$3/month, first month free** — using
-Stripe's hosted Checkout, so no card data ever touches this server. It's off
-until you connect Stripe; until then the Pro button falls back to an honest
-early-access email capture (no fake checkout).
-
-**Connect Stripe:**
-
-1. In the [Stripe Dashboard](https://dashboard.stripe.com) (start in **Test
-   mode**), create a **Product** with a **recurring $3/month price**. Copy the
-   price id (`price_…`).
-2. Copy your **secret key** (`sk_test_…`).
-3. Create a **webhook endpoint** pointing at
-   `<server>/api/billing/webhook`, subscribed to
-   `customer.subscription.created`, `.updated`, and `.deleted`. Copy its
-   **signing secret** (`whsec_…`).
-   - Locally, instead of a public URL, run the Stripe CLI:
-     `stripe listen --forward-to localhost:4000/api/billing/webhook`
-     and use the `whsec_…` it prints.
-4. Put them in `server/.env`:
-   ```
-   STRIPE_SECRET_KEY=sk_test_…
-   STRIPE_PRICE_ID=price_…
-   STRIPE_WEBHOOK_SECRET=whsec_…
-   APP_URL=http://localhost:5173
-   ```
-5. Restart the backend. "Upgrade to Pro" now opens real Checkout; the webhook
-   grants/revokes Pro, and the plan is enforced server-side (the full comp
-   library unlocks for Pro accounts). Use Stripe's test card `4242 4242 4242
-   4242` to try it end to end.
-
-Go live by swapping the test keys/price/webhook for live-mode ones.
+1. **Database:** run `server/schema.sql` once in the Supabase SQL editor (it's
+   idempotent). Upgrading an existing database only needs
+   `server/migrations/2026-10-26-social.sql`. Until it's run, social features
+   hide themselves.
+2. **WCA sign-in:** register an app at
+   https://www.worldcubeassociation.org/oauth/applications with redirect URI
+   `<APP_URL>/auth/wca` and scope `public` (sign-in also asks for `email`).
+3. **AdSense:** get approved, create one display unit per placement, set the
+   env vars, and turn on Google's free EU consent message (Privacy &
+   messaging) in AdSense. Note: Vercel's Hobby plan doesn't allow ads — use
+   Vercel Pro or a host that permits commercial use.
+4. **Supabase free tier** pauses projects after 7 days without database
+   activity; `vercel.json` schedules a daily `/api/cron/keepalive` to prevent
+   that (set `CRON_SECRET`).
 
 ## Running locally
 
-Requires Node 22.18+ — the server runs TypeScript directly via Node's
-type-stripping and uses `--env-file-if-exists` (developed on Node 26).
+Node 22.18+ (the server runs TypeScript directly via type-stripping).
 
 ```bash
-# Terminal 1 — backend (port 4000)
-cd server && npm install && npm start
-
-# Terminal 2 — frontend (port 5173, proxies /api to 4000)
-cd client && npm install && npm run dev
+cd server && npm install && npm start      # API on :4000
+cd client && npm install && npm run dev    # app on :5173, proxies /api
 ```
 
 ## Verification
 
 ```bash
-cd server && npm run verify          # real WCA fetch + grouping sanity check
-cd client && node src/lib/cubing.test.ts   # WCA math unit tests
-cd client && npm run build           # typecheck + production build
+cd client && node src/lib/cubing.test.ts          # WCA scoring + placement
+cd client && node src/lib/timer/stats.test.ts     # practice stats
+cd client && node src/lib/timer/engine.test.ts    # timer state machine
+cd client && node src/lib/timer/typing.test.ts    # typed-time parsing
+cd server && node src/social/social.test.ts       # sync codec, handles, scoring
+cd server && node src/wcaOauth.test.ts            # WCA OAuth state signing
+cd server && npm run verify                       # real WCA fetch sanity check
+cd client && npm run build                        # typecheck + production build
 ```
-
-## Timer conventions
-
-- **Simulator (competition timer)**: press space to start 15s inspection;
-  hold space (red) until armed (green), release to start; any key stops.
-  Starting after 15.00s marks that solve +2. Touch: tap to inspect,
-  press-and-hold + release to start, tap to stop.
-- **Skill Timer (stage splits)**: space (or tap) to start, then a tap at the
-  end of each stage — cross, F2L, OLL, final press ends the solve after PLL.

@@ -7,6 +7,8 @@ import {
 } from "../lib/api.ts";
 import { store } from "../lib/store.ts";
 import { useAuth } from "../lib/auth.tsx";
+import { AdSlot } from "./AdSlot.tsx";
+import { RoundLeaderboard } from "./RoundLeaderboard.tsx";
 import { useT } from "../lib/i18n.tsx";
 import {
   attemptCs,
@@ -15,6 +17,8 @@ import {
   madeTheCut,
   ordinal,
   placeAverage,
+  placeResult,
+  bestSingleCs,
   wcaAverageFromAttempts,
   type Attempt,
 } from "../lib/cubing.ts";
@@ -81,8 +85,10 @@ function WcaCompare({
   total: number;
 }) {
   const { t } = useT();
+  // A verified WCA ID (from WCA sign-in) wins over one typed on this device.
+  const verified = useAuth().user?.profile.wcaId;
   const [wcaId, setWcaId] = useState(() =>
-    (store.get(WCA_ID_KEY) ?? "").toUpperCase(),
+    (verified ?? store.get(WCA_ID_KEY) ?? "").toUpperCase(),
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,7 +130,7 @@ function WcaCompare({
 
   // Prefill from a prior visit and auto-fetch if a valid ID is already stored.
   useEffect(() => {
-    const saved = (store.get(WCA_ID_KEY) ?? "").trim().toUpperCase();
+    const saved = (verified ?? store.get(WCA_ID_KEY) ?? "").trim().toUpperCase();
     if (saved && WCA_ID_RE.test(saved)) void lookup(saved);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -191,6 +197,7 @@ export function Results({
   attempts,
   onRestart,
   onAdvance,
+  cutoff = null,
 }: {
   comp: Competition;
   event: ClientEvent;
@@ -199,6 +206,8 @@ export function Results({
   onRestart: () => void;
   /** advance into the next round the user just qualified for */
   onAdvance: (roundTypeId: string, roundName: string) => void;
+  /** a combined round's cutoff, when it has one */
+  cutoff?: { numberOfAttempts: number; attemptResultCs: number } | null;
 }) {
   const { user } = useAuth();
   const { t } = useT();
@@ -207,7 +216,10 @@ export function Results({
   const drops = event.format === "ao5";
 
   // Official average, DNF-aware (format-specific): null means the average is DNF.
-  const avgCs = wcaAverageFromAttempts(attempts, event.format);
+  // Fewer attempts than the format means the cutoff ended the round: no
+  // average, ranked after everyone who made it, by best single.
+  const stoppedAtCutoff = attempts.length < event.solves;
+  const avgCs = stoppedAtCutoff ? null : wcaAverageFromAttempts(attempts, event.format);
   const avgText = avgCs === null ? "DNF" : formatCentiseconds(avgCs);
 
   // Best/worst marking. Mo3 drops nothing, so it marks neither.
@@ -219,7 +231,7 @@ export function Results({
       ? -1
       : orderVals.lastIndexOf(Math.max(...orderVals));
 
-  type Neighbor = { rank: number; name: string; averageCs: number };
+  type Neighbor = { rank: number; name: string; averageCs: number | null };
   const [ranking, setRanking] = useState<{
     placement: number;
     total: number;
@@ -247,7 +259,6 @@ export function Results({
   const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
-    if (avgCs === null) return; // a DNF average doesn't place
     let cancelled = false;
     setRankError(null);
     setRanking(null);
@@ -262,14 +273,21 @@ export function Results({
           setRankError(t("no official results are published for this round yet"));
           return;
         }
-        const averages = r.competitors.map((c) => c.averageCs);
-        const { placement, total } = placeAverage(avgCs, averages, r.totalCompetitors);
-        // The user slots in at index (placement - 1) among the valid field.
+        // Official order already applies the tie-break; competitors who are
+        // strictly better than the user come first (WCA ranking rules).
+        const { placement, total } = placeResult(
+          { averageCs: avgCs, bestCs: bestSingleCs(attempts) },
+          r.competitors,
+        );
+        const averages = r.competitors
+          .map((c) => c.averageCs)
+          .filter((a): a is number => a !== null);
+        // The user slots in at index (placement - 1) of the official list.
         // Real competitors [idx-10, idx) rank above; [idx, idx+10) below.
         const idx = placement - 1;
-        const toNeighbor = (c: { name: string; averageCs: number }, i: number) => ({
-          // ranks shift down by one below the user's inserted slot
-          rank: i < idx ? i + 1 : i + 2,
+        const toNeighbor = (c: { name: string; pos: number; averageCs: number | null }, i: number) => ({
+          // official positions; everyone behind the user moves down one
+          rank: i < idx ? c.pos : c.pos + 1,
           name: c.name,
           averageCs: c.averageCs,
         });
@@ -335,20 +353,26 @@ export function Results({
 
       <Rise index={1} className="results__rank-wrap">
         <div className="card results__rank">
-          {avgCs === null && (
+          {stoppedAtCutoff && cutoff && (
             <p className="results__rank-line">
-              {drops
-                ? t("Two or more DNFs make the average itself a DNF, and in an official round that wouldn't place.")
-                : t("In a mean of 3 a single DNF makes the whole mean a DNF, and in an official round that wouldn't place.")}{" "}
-              {t("Solve the round again and keep it clean.")}
+              {t("You didn't make the cutoff (under {time} within the first {n}), so the round ended there. Officially you'd be ranked after everyone who made it, by your best single.")
+                .replace("{time}", formatCentiseconds(cutoff.attemptResultCs))
+                .replace("{n}", String(cutoff.numberOfAttempts))}
             </p>
           )}
-          {avgCs !== null && !ranking && !rankError && (
+          {avgCs === null && !stoppedAtCutoff && (
+            <p className="results__rank-line">
+              {drops
+                ? t("Two or more DNFs make the average itself a DNF. Officially you'd still be ranked, after every valid average, by your best single.")
+                : t("In a mean of 3 a single DNF makes the whole mean a DNF. Officially you'd still be ranked, after every valid mean, by your best single.")}
+            </p>
+          )}
+          {!ranking && !rankError && (
             <div className="state-center">
               <div className="spinner" />
             </div>
           )}
-          {avgCs !== null && rankError && (
+          {rankError && (
             <div className="results__rank-error">
               <p className="muted">
                 {t("Couldn't place you ({error}). Your average is still {avg}.")
@@ -363,7 +387,7 @@ export function Results({
               </button>
             </div>
           )}
-          {avgCs !== null && ranking && (
+          {ranking && (
             <>
               <p className="results__rank-line">
                 {t("Your average of")}{" "}
@@ -458,7 +482,7 @@ export function Results({
                 <span className="arrow">→</span>
               </button>
             )}
-            {ranking.qualified && !ranking.nextRound.solvable && (
+            {ranking.qualified && ranking.nextRound.solvable === false && (
               <p className="tertiary cut__note">
                 {t(
                   "The {round}'s scrambles weren't uploaded to the WCA, so it can't be simulated.",
@@ -497,7 +521,7 @@ export function Results({
                       <span className="board__rank mono">{ordinal(n.rank)}</span>
                       <span className="board__name">{n.name}</span>
                       <span className="board__time mono">
-                        {formatCentiseconds(n.averageCs)}
+                        {n.averageCs === null ? "DNF" : formatCentiseconds(n.averageCs)}
                       </span>
                     </div>
                   ))}
@@ -517,7 +541,7 @@ export function Results({
                   <span className="board__rank mono">{ordinal(n.rank)}</span>
                   <span className="board__name">{n.name}</span>
                   <span className="board__time mono">
-                    {formatCentiseconds(n.averageCs)}
+                    {n.averageCs === null ? "DNF" : formatCentiseconds(n.averageCs)}
                   </span>
                 </div>
               ))}
@@ -531,7 +555,7 @@ export function Results({
                   <span className="board__rank mono">{ordinal(n.rank)}</span>
                   <span className="board__name">{n.name}</span>
                   <span className="board__time mono">
-                    {formatCentiseconds(n.averageCs)}
+                    {n.averageCs === null ? "DNF" : formatCentiseconds(n.averageCs)}
                   </span>
                 </div>
               ))}
@@ -573,11 +597,30 @@ export function Results({
         </p>
       </Rise>
 
-      <Rise index={6}>
+      {round.roundTypeId && (
+        <Rise index={6}>
+          <RoundLeaderboard
+            compId={comp.id}
+            compName={comp.name}
+            eventId={event.id}
+            roundTypeId={round.roundTypeId}
+            groupId={round.groupId}
+            attempts={attempts}
+            averageCs={avgCs}
+            placement={ranking?.placement ?? null}
+            fieldSize={ranking?.total ?? null}
+            partial={stoppedAtCutoff}
+          />
+        </Rise>
+      )}
+
+      <Rise index={7}>
         <button className="btn btn--secondary" onClick={onRestart}>
           {t("Try another competition")}
         </button>
       </Rise>
+
+      <AdSlot placement="results" />
     </div>
   );
 }

@@ -34,6 +34,7 @@ export function Solving({
   onChangeGroup,
   groupBusy = false,
   onBack,
+  cutoff = null,
 }: {
   comp: Competition;
   event: ClientEvent;
@@ -44,6 +45,8 @@ export function Solving({
   onAttempt: (attempt: Attempt) => void;
   onChangeGroup?: (groupId: string) => void;
   groupBusy?: boolean;
+  /** a combined round's cutoff, once known */
+  cutoff?: { numberOfAttempts: number; attemptResultCs: number } | null;
   onBack: () => void;
 }) {
   const { t } = useT();
@@ -67,6 +70,14 @@ export function Solving({
           {roundName ? `${roundName} · ` : ""}
           {event.display} · {index + 1} / {total}
         </span>
+        {cutoff && (
+          <span className="solving__cutoff tertiary">
+            {t("Cutoff")}: {cutoff.numberOfAttempts === 1
+              ? t("first attempt under")
+              : t("one of the first {n} under").replace("{n}", String(cutoff.numberOfAttempts))}{" "}
+            <span className="mono">{formatCentiseconds(cutoff.attemptResultCs)}</span>
+          </span>
+        )}
         <div className="solving__times mono" aria-label={t("Times so far")}>
           {attempts.map((a, i) => (
             <span key={i} className="solving__time">

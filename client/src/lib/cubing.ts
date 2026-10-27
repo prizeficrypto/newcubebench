@@ -47,14 +47,21 @@ export function attemptEffectiveMs(a: Attempt): number {
 }
 
 /**
- * The attempt's OFFICIAL time in centiseconds. WCA results live in
- * centiseconds, so each attempt is quantized here first and everything
- * official — best/worst selection, the average, ranking — is computed from
- * these values. (+2 is exactly +200 cs, so quantizing before or after the
- * penalty is equivalent.)
+ * The attempt's OFFICIAL result in centiseconds, the way the WCA records it:
+ * truncated to the hundredth (Regulation 9f1), or to the whole second at
+ * 10:00.00 and over (9f2). Everything official — best/worst selection, the
+ * average, ranking — is computed from these values. (+2 is exactly +200 cs,
+ * so it can be added before the 10-minute step.)
  */
 export function attemptCs(a: Attempt): number {
-  return msToCentiseconds(a.rawMs) + (a.plus2 ? 200 : 0);
+  const cs = Math.floor(a.rawMs / 10) + (a.plus2 ? 200 : 0);
+  return cs >= 60_000 ? Math.floor(cs / 100) * 100 : cs;
+}
+
+/** Round a mean of centiseconds the WCA way: to the hundredth, or to the
+ *  second (.50 up) at 10 minutes and over (Regulation 9f2). */
+export function roundAverageCs(meanCs: number): number {
+  return meanCs >= 60_000 ? Math.round(meanCs / 100) * 100 : Math.round(meanCs);
 }
 
 /**
@@ -86,7 +93,7 @@ export function wcaAo5FromAttempts(attempts: Attempt[]): number | null {
   // one DNF: it IS the worst (already excluded) -> drop only the best of the
   // four real times; zero DNFs: drop best and worst of five.
   const middleThree = dnfCount === 1 ? cs.slice(1) : cs.slice(1, 4);
-  return Math.round(
+  return roundAverageCs(
     middleThree.reduce((sum, t) => sum + t, 0) / middleThree.length,
   );
 }
@@ -112,7 +119,7 @@ export function wcaAverageFromAttempts(
   }
   if (attempts.some((a) => a.dnf)) return null; // any DNF -> DNF mean
   const cs = attempts.map(attemptCs);
-  return Math.round(cs.reduce((sum, t) => sum + t, 0) / cs.length);
+  return roundAverageCs(cs.reduce((sum, t) => sum + t, 0) / cs.length);
 }
 
 /**
@@ -186,6 +193,50 @@ export function stageBreakdown(solves: Solve[]): StageBreakdown {
   );
   const slowestShare = grandTotalMs > 0 ? totals[slowest] / grandTotalMs : 0;
   return { totals, grandTotalMs, slowest, slowestShare };
+}
+
+/**
+ * A combined round's cutoff: did the competitor miss it? True once the first
+ * `numberOfAttempts` attempts are in and none is strictly under the cutoff
+ * (Regulation 9g) — the round ends there, with no average.
+ */
+export function missedCutoff(
+  attempts: Attempt[],
+  cutoff: { numberOfAttempts: number; attemptResultCs: number },
+): boolean {
+  if (attempts.length < cutoff.numberOfAttempts) return false;
+  return !attempts
+    .slice(0, cutoff.numberOfAttempts)
+    .some((a) => !a.dnf && attemptCs(a) < cutoff.attemptResultCs);
+}
+
+/** The best valid single among attempts, in cs (null if every one is a DNF). */
+export function bestSingleCs(attempts: Attempt[]): number | null {
+  const valid = attempts.filter((a) => !a.dnf).map(attemptCs);
+  return valid.length ? Math.min(...valid) : null;
+}
+
+/**
+ * Where the user would place among a round's official competitors, by WCA
+ * ranking rules: by average; equal averages broken by best single
+ * (Regulation 9f14); no valid average ranks after every valid average, by best
+ * single; an identical (average, best) pair shares the position (9f15), so
+ * only STRICTLY better competitors count. The user joins the field, so the
+ * total is one more than the official field.
+ */
+export function placeResult(
+  user: { averageCs: number | null; bestCs: number | null },
+  competitors: { averageCs: number | null; bestCs: number | null }[],
+): { placement: number; total: number } {
+  const ua = user.averageCs ?? Infinity;
+  const ub = user.bestCs ?? Infinity;
+  let better = 0;
+  for (const c of competitors) {
+    const ca = c.averageCs ?? Infinity;
+    const cb = c.bestCs ?? Infinity;
+    if (ca < ua || (ca === ua && cb < ub)) better++;
+  }
+  return { placement: better + 1, total: competitors.length + 1 };
 }
 
 /**

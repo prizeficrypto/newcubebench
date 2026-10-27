@@ -1,102 +1,25 @@
 import express from "express";
 import cors from "cors";
-import { rateLimit } from "express-rate-limit";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { AuthError } from "./auth.ts";
 import { sql } from "./db.ts";
-import { TTL, withCache } from "./cache.ts";
-import { ROUND_TYPES } from "./roundTypes.ts";
-import {
-  AuthError,
-  destroySession,
-  googleAuthAvailable,
-  isPro,
-  promoStatus,
-  publicUser,
-  signInWithEmail,
-  signInWithGoogle,
-  signUpWithEmail,
-  updateProfile,
-  userForToken,
-} from "./auth.ts";
-import {
-  BillingError,
-  createCheckoutUrl,
-  createPortalUrl,
-  handleWebhook,
-  stripeConfigured,
-} from "./billing.ts";
-import { FEATURED_COMP_IDS } from "./featured.ts";
-import { isSupportedEvent } from "./wcaEvents.ts";
-import {
-  getCompetition,
-  getCompetitionEvents,
-  getCompetitionHighlight,
-  getEventRanking,
-  getEventRounds,
-  getEventRoundScrambles,
-  getWcaPerson,
-  isValidWcaId,
-  searchCompetitions,
-  WcaError,
-} from "./wca.ts";
+import { WcaError } from "./wca.ts";
+import { accountRouter } from "./routes/account.ts";
+import { dataRouter, probeWca } from "./routes/data.ts";
+import { feedbackRouter } from "./routes/feedback.ts";
+import { socialRouter } from "./routes/social.ts";
 
+/**
+ * The Cube Bench API. Thin composition: each concern lives in its own router
+ * under routes/ — WCA data, accounts, social, feedback.
+ */
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
 
 app.use(cors());
-// Stripe webhook needs the raw body for signature verification; every other
-// route gets JSON parsing.
-app.use((req, res, next) =>
-  req.originalUrl === "/api/billing/webhook"
-    ? next()
-    : express.json()(req, res, next),
-);
-
-// ---- Rate limits: the unauthenticated write/search endpoints are the
-// abuse surface (each miss can also fan out to WCA). Per-IP, in-memory. ----
-
-const limit = (windowMs: number, max: number) =>
-  rateLimit({
-    windowMs,
-    limit: max,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: "Too many requests — slow down a little.", status: 429 },
-  });
-
-const authLimiter = limit(10 * 60 * 1000, 30); // 30 / 10 min
-const captureLimiter = limit(10 * 60 * 1000, 10); // 10 / 10 min
-const searchLimiter = limit(60 * 1000, 60); // 60 / min
-
-// Wrap async handlers so rejections hit the error middleware instead of
-// hanging the request (no hidden failures).
-type Handler = (
-  req: express.Request,
-  res: express.Response,
-) => Promise<unknown>;
-const wrap =
-  (fn: Handler) =>
-  (req: express.Request, res: express.Response, next: express.NextFunction) =>
-    fn(req, res).catch(next);
-
-/** Was this competition already over? Drives cache TTL. */
-async function isFinished(id: string): Promise<boolean> {
-  try {
-    const comp = await withCache(`comp:${id}`, TTL.SHORT_MS, () =>
-      getCompetition(id),
-    );
-    if (!comp.end_date) return false;
-    // end_date is date-only (UTC midnight at the START of the final day);
-    // the comp is only over once that whole day has passed. Otherwise an
-    // in-progress comp's partial results get cached for 24h.
-    const DAY_MS = 24 * 60 * 60 * 1000;
-    return new Date(comp.end_date).getTime() + DAY_MS < Date.now();
-  } catch {
-    return false; // when unsure, treat as live and cache conservatively
-  }
-}
+app.use(express.json({ limit: "2mb" }));
 
 // ---- Health probes: liveness and readiness kept distinct ----
 
@@ -110,9 +33,7 @@ app.get("/health", (_req, res) => {
 // to an instance that can't do its one job — proxying WCA.
 app.get("/ready", async (_req, res) => {
   try {
-    await withCache("ready:probe", 30_000, () =>
-      searchCompetitions({}).then(() => true),
-    );
+    await probeWca();
     res.json({ status: "ready" });
   } catch (err) {
     res.status(503).json({
@@ -123,441 +44,43 @@ app.get("/ready", async (_req, res) => {
   }
 });
 
-// ---- Data endpoints ----
-
-// Searchable + browsable competition list: full-text, country + date filters,
-// and pagination so the client can scroll to load more.
-app.get(
-  "/api/competitions",
-  searchLimiter,
-  wrap(async (req, res) => {
-    const str = (v: unknown) => (typeof v === "string" ? v : "");
-    const q = str(req.query.q);
-    const country = str(req.query.country); // ISO-2, e.g. "US"
-    const start = str(req.query.start); // YYYY-MM-DD
-    const end = str(req.query.end);
-    const page = Math.max(1, Math.min(50, Number(str(req.query.page)) || 1));
-    const perPage = 24;
-    const key = `search:${q.toLowerCase()}|${country}|${start}|${end}|p${page}`;
-    const { competitions, hasMore } = await withCache(key, TTL.SHORT_MS, () =>
-      searchCompetitions({ q, country, start, end, page, perPage }),
-    );
-    res.json({ competitions, page, hasMore });
-  }),
-);
-
-// First-round 3x3 scramble set (Group A). Reports availability explicitly so
-// the client can block solving for comps with no scrambles.
-// Gate a competition behind Pro (featured comps are free). Returns true if
-// the request should be blocked; writes the 403 itself.
-async function blockedByPlan(
-  req: express.Request,
-  res: express.Response,
-  id: string,
-): Promise<boolean> {
-  if (FEATURED_COMP_IDS.has(id)) return false;
-  const user = await userForToken(bearerToken(req));
-  if (isPro(user)) return false;
-  res.status(403).json({
-    error: "This competition is part of Cube Bench Pro.",
-    upgrade: true,
-  });
-  return true;
-}
-
-/** Read + validate the `event` query param; defaults to 3x3. Writes a 400
- *  and returns null on an unsupported event. */
-function eventParam(req: express.Request, res: express.Response): string | null {
-  const event =
-    typeof req.query.event === "string" && req.query.event ? req.query.event : "333";
-  if (!isSupportedEvent(event)) {
-    res.status(400).json({ error: `Unsupported event "${event}".` });
-    return null;
+// Daily keep-alive (Vercel Cron, see vercel.json). Supabase's free tier pauses
+// a project after 7 days without database activity, which takes sign-in and
+// every account feature down; one trivial query a day prevents that. Vercel
+// sends "Authorization: Bearer $CRON_SECRET" when CRON_SECRET is set.
+app.get("/api/cron/keepalive", async (req, res) => {
+  const secret = process.env.CRON_SECRET ?? "";
+  if (secret && req.headers.authorization !== `Bearer ${secret}`) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
   }
-  return event;
-}
-
-// A short summary card for a competition: location + date (from the comp) plus
-// the 3x3 champion and event count. Metadata only — not Pro-gated.
-app.get(
-  "/api/competitions/:id/highlight",
-  wrap(async (req, res) => {
-    const { id } = req.params;
-    const [comp, highlight] = await Promise.all([
-      withCache(`comp:${id}`, TTL.SHORT_MS, () => getCompetition(id)),
-      withCache(`highlight:${id}`, TTL.LONG_MS, () =>
-        getCompetitionHighlight(id),
-      ),
-    ]);
-    res.json({ competition: comp, ...highlight });
-  }),
-);
-
-// Which supported events this competition held (with a full scramble set).
-app.get(
-  "/api/competitions/:id/events",
-  wrap(async (req, res) => {
-    const { id } = req.params;
-    if (await blockedByPlan(req, res, id)) return;
-    const [comp, events] = await Promise.all([
-      withCache(`comp:${id}`, TTL.SHORT_MS, () => getCompetition(id)),
-      withCache(`events:${id}`, TTL.LONG_MS, () => getCompetitionEvents(id)),
-    ]);
-    res.json({ competition: comp, events });
-  }),
-);
-
-// The solvable rounds of an event at a competition (first → final), for the
-// round picker. Metadata only — scrambles come from /round.
-app.get(
-  "/api/competitions/:id/rounds",
-  wrap(async (req, res) => {
-    const { id } = req.params;
-    if (await blockedByPlan(req, res, id)) return;
-    const event = eventParam(req, res);
-    if (!event) return;
-    const [comp, data] = await Promise.all([
-      withCache(`comp:${id}`, TTL.SHORT_MS, () => getCompetition(id)),
-      withCache(`rounds:${id}:${event}`, TTL.LONG_MS, () =>
-        getEventRounds(id, event),
-      ),
-    ]);
-    res.json({
-      competition: comp,
-      event,
-      available: data.available,
-      reason: data.reason,
-      rounds: data.rounds.map((r) => ({
-        roundTypeId: r.roundTypeId,
-        roundName: r.roundName,
-      })),
-    });
-  }),
-);
-
-// A single round's scramble set. roundTypeId omitted → the first round.
-app.get(
-  "/api/competitions/:id/round",
-  wrap(async (req, res) => {
-    const { id } = req.params;
-    if (await blockedByPlan(req, res, id)) return;
-    const event = eventParam(req, res);
-    if (!event) return;
-    const roundTypeId =
-      typeof req.query.roundTypeId === "string" ? req.query.roundTypeId : undefined;
-    if (roundTypeId && !(roundTypeId in ROUND_TYPES)) {
-      res.status(400).json({ error: `Unknown round type "${roundTypeId}".` });
-      return;
-    }
-    // Scramble group (A/B/C…). Validated shape only; an unknown group falls
-    // back to the round's default inside getEventRoundScrambles.
-    const group =
-      typeof req.query.group === "string" && /^[A-Z]$/.test(req.query.group)
-        ? req.query.group
-        : undefined;
-    const [comp, round] = await Promise.all([
-      withCache(`comp:${id}`, TTL.SHORT_MS, () => getCompetition(id)),
-      // Scrambles are immutable once generated -> cache long, per (event, round, group).
-      withCache(
-        `round:${id}:${event}:${roundTypeId ?? "first"}:${group ?? "def"}`,
-        TTL.LONG_MS,
-        () => getEventRoundScrambles(id, event, roundTypeId, group),
-      ),
-    ]);
-    res.json({ competition: comp, event, round });
-  }),
-);
-
-// Real competitors (named, WCA-ordered) for a given event round.
-app.get(
-  "/api/competitions/:id/ranking",
-  wrap(async (req, res) => {
-    const { id } = req.params;
-    const event = eventParam(req, res);
-    if (!event) return;
-    const roundTypeId =
-      typeof req.query.roundTypeId === "string" ? req.query.roundTypeId : "1";
-    // Round codes are a small closed set; anything else is a bad request,
-    // not a fresh cache key + upstream fetch.
-    if (!(roundTypeId in ROUND_TYPES)) {
-      res.status(400).json({ error: `Unknown round type "${roundTypeId}".` });
-      return;
-    }
-    const ttl = (await isFinished(id)) ? TTL.LONG_MS : TTL.SHORT_MS;
-    const ranking = await withCache(
-      `ranking:${id}:${event}:${roundTypeId}`,
-      ttl,
-      () => getEventRanking(id, event, roundTypeId),
-    );
-    // The advancement fact comes from /results, but simulating the next round
-    // needs its /scrambles. Cross-check so the client only offers to simulate
-    // rounds that actually have a full scramble set (no dead-end button). This
-    // is best-effort: if the scramble lookup fails, we still return the
-    // ranking (solvable stays undefined -> the client hides the button but
-    // keeps the advancement fact) rather than failing the whole request.
-    let out = ranking;
-    if (ranking.nextRound) {
-      let solvable: boolean | undefined = undefined;
-      try {
-        const rounds = await withCache(`rounds:${id}:${event}`, TTL.LONG_MS, () =>
-          getEventRounds(id, event),
-        );
-        solvable =
-          rounds.available &&
-          rounds.rounds.some(
-            (r) => r.roundTypeId === ranking.nextRound!.roundTypeId,
-          );
-      } catch {
-        /* scramble lookup unavailable — leave solvable undefined */
-      }
-      out = { ...ranking, nextRound: { ...ranking.nextRound, solvable } };
-    }
-    res.json({ ranking: out });
-  }),
-);
-
-// A person's official WCA personal records (single/average per event, in
-// centiseconds). Public metadata — not Pro-gated — so guests can compare their
-// real average too. Bad ID format fails fast as a 400; unknown ID -> 404.
-app.get(
-  "/api/wca/person/:wcaId",
-  wrap(async (req, res) => {
-    const wcaId = String(req.params.wcaId).toUpperCase();
-    if (!isValidWcaId(wcaId)) {
-      throw new WcaError("That doesn't look like a WCA ID.", 400);
-    }
-    const person = await withCache(`wca-person:${wcaId}`, TTL.LONG_MS, () =>
-      getWcaPerson(wcaId),
-    );
-    res.json(person);
-  }),
-);
-
-// ---- Auth: Google + email/password ----
-
-function bearerToken(req: express.Request): string {
-  const header = req.headers.authorization ?? "";
-  return header.startsWith("Bearer ") ? header.slice(7) : "";
-}
-
-async function requireUser(req: express.Request, res: express.Response) {
-  const user = await userForToken(bearerToken(req));
-  if (!user) {
-    res.status(401).json({ error: "Not signed in." });
-    return null;
+  try {
+    await sql`select 1`;
+    res.json({ status: "ok" });
+  } catch (err) {
+    console.error(`[keepalive] ${err instanceof Error ? err.message : String(err)}`);
+    res.status(503).json({ status: "database unavailable" });
   }
-  return user;
-}
-
-// What this server can actually do (drives which buttons the client shows).
-app.get("/api/auth/config", (_req, res) => {
-  res.json({
-    googleAvailable: googleAuthAvailable(),
-    billingAvailable: stripeConfigured(),
-  });
 });
 
-// Free "first 100 sign-ups" promo counter (no cache — must be live).
-app.get(
-  "/api/promo",
-  wrap(async (_req, res) => {
-    res.json(await promoStatus());
-  }),
-);
+// AdSense's ads.txt, built from the publisher id so it never needs a redeploy
+// of static files. 404 until ADSENSE_PUBLISHER_ID (e.g. "pub-123…") is set.
+app.get("/ads.txt", (_req, res) => {
+  const pub = (process.env.ADSENSE_PUBLISHER_ID ?? "").trim().replace(/^ca-/, "");
+  if (!/^pub-\d{10,20}$/.test(pub)) {
+    res.status(404).type("text/plain").send("");
+    return;
+  }
+  res
+    .type("text/plain")
+    .set("Cache-Control", "public, max-age=3600, s-maxage=86400")
+    .send(`google.com, ${pub}, DIRECT, f08c47fec0942fa0\n`);
+});
 
-app.post(
-  "/api/auth/google",
-  authLimiter,
-  wrap(async (req, res) => {
-    const credential =
-      typeof req.body?.credential === "string" ? req.body.credential : "";
-    if (!credential) {
-      res.status(400).json({ error: "Missing Google credential." });
-      return;
-    }
-    const { user, token } = await signInWithGoogle(credential);
-    res.json({ user: publicUser(user), token });
-  }),
-);
-
-app.post(
-  "/api/auth/signup",
-  authLimiter,
-  wrap(async (req, res) => {
-    const { user, token } = await signUpWithEmail(
-      typeof req.body?.email === "string" ? req.body.email : "",
-      typeof req.body?.password === "string" ? req.body.password : "",
-      typeof req.body?.name === "string" ? req.body.name : "",
-    );
-    res.json({ user: publicUser(user), token });
-  }),
-);
-
-app.post(
-  "/api/auth/signin",
-  authLimiter,
-  wrap(async (req, res) => {
-    const { user, token } = await signInWithEmail(
-      typeof req.body?.email === "string" ? req.body.email : "",
-      typeof req.body?.password === "string" ? req.body.password : "",
-    );
-    res.json({ user: publicUser(user), token });
-  }),
-);
-
-app.get(
-  "/api/me",
-  wrap(async (req, res) => {
-    const user = await requireUser(req, res);
-    if (!user) return;
-    res.json({ user: publicUser(user) });
-  }),
-);
-
-app.post(
-  "/api/profile",
-  wrap(async (req, res) => {
-    const user = await requireUser(req, res);
-    if (!user) return;
-    const displayName =
-      typeof req.body?.displayName === "string"
-        ? req.body.displayName.trim().slice(0, 80)
-        : undefined;
-    const avg333 =
-      typeof req.body?.avg333 === "string"
-        ? req.body.avg333.trim().slice(0, 20)
-        : undefined;
-    const updated = await updateProfile(user.id, { displayName, avg333 });
-    res.json({ user: updated ? publicUser(updated) : null });
-  }),
-);
-
-app.post(
-  "/api/auth/signout",
-  wrap(async (req, res) => {
-    await destroySession(bearerToken(req));
-    res.json({ status: "ok" });
-  }),
-);
-
-// ---- Billing: real Stripe subscription (config-gated) ----
-
-// Start hosted Checkout for Pro; returns a Stripe URL to redirect to.
-app.post(
-  "/api/billing/checkout",
-  authLimiter,
-  wrap(async (req, res) => {
-    const user = await requireUser(req, res);
-    if (!user) return;
-    const plan = req.body?.plan === "annual" ? "annual" : "monthly";
-    const url = await createCheckoutUrl(user, plan);
-    res.json({ url });
-  }),
-);
-
-// Stripe Billing Portal, for managing or cancelling an existing subscription.
-app.post(
-  "/api/billing/portal",
-  wrap(async (req, res) => {
-    const user = await requireUser(req, res);
-    if (!user) return;
-    const url = await createPortalUrl(user);
-    res.json({ url });
-  }),
-);
-
-// Stripe webhook — the only writer of subscription state. Raw body (see the
-// JSON-parser skip above) so the signature verifies.
-app.post(
-  "/api/billing/webhook",
-  express.raw({ type: "*/*" }),
-  wrap(async (req, res) => {
-    await handleWebhook(
-      req.body as Buffer,
-      req.headers["stripe-signature"] as string | undefined,
-    );
-    res.json({ received: true });
-  }),
-);
-
-// ---- Early access email capture ----
-// Honest pre-launch capture only: no payment, no checkout — just an email
-// stored in Postgres. Idempotent per address (ON CONFLICT DO NOTHING).
-
-const EMAIL_MAX_LEN = 254;
-// Deliberately loose shape check — the goal is catching typos, not RFC 5322.
-const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-app.post(
-  "/api/early-access",
-  captureLimiter,
-  wrap(async (req, res) => {
-    const email =
-      typeof req.body?.email === "string"
-        ? req.body.email.trim().toLowerCase()
-        : "";
-    if (!email || email.length > EMAIL_MAX_LEN || !EMAIL_SHAPE.test(email)) {
-      res.status(400).json({ error: "Please enter a valid email address." });
-      return;
-    }
-    await sql`
-      insert into early_access (email) values (${email})
-      on conflict (email) do nothing
-    `;
-    res.json({ status: "ok" });
-  }),
-);
-
-// In-app feedback: bug reports and suggestions. Open to guests (an account is
-// not required to tell us something's broken). All fields are bounded and the
-// contact email is optional; the signed-in user is attached when present.
-const FEEDBACK_MIN_LEN = 3;
-const FEEDBACK_MAX_LEN = 4000;
-
-app.post(
-  "/api/feedback",
-  captureLimiter,
-  wrap(async (req, res) => {
-    const kindRaw = typeof req.body?.kind === "string" ? req.body.kind : "";
-    const kind = kindRaw === "bug" || kindRaw === "suggestion" ? kindRaw : "";
-    if (!kind) {
-      res.status(400).json({ error: "Choose whether this is a bug or a suggestion." });
-      return;
-    }
-    const message =
-      typeof req.body?.message === "string" ? req.body.message.trim() : "";
-    if (message.length < FEEDBACK_MIN_LEN) {
-      res.status(400).json({ error: "Please add a little more detail." });
-      return;
-    }
-    const emailRaw =
-      typeof req.body?.email === "string"
-        ? req.body.email.trim().toLowerCase()
-        : "";
-    const email =
-      emailRaw && emailRaw.length <= EMAIL_MAX_LEN && EMAIL_SHAPE.test(emailRaw)
-        ? emailRaw
-        : null;
-    const path =
-      typeof req.body?.path === "string" ? req.body.path.slice(0, 300) : null;
-    const userAgent = String(req.headers["user-agent"] ?? "").slice(0, 400);
-    // Attach the account if the request is authenticated; guests stay null.
-    const user = await userForToken(bearerToken(req));
-
-    await sql`
-      insert into feedback (kind, message, email, user_id, path, user_agent)
-      values (
-        ${kind},
-        ${message.slice(0, FEEDBACK_MAX_LEN)},
-        ${email},
-        ${user?.id ?? null},
-        ${path},
-        ${userAgent}
-      )
-    `;
-    res.json({ status: "ok" });
-  }),
-);
+app.use(dataRouter);
+app.use(accountRouter);
+app.use(socialRouter);
+app.use(feedbackRouter);
 
 // ---- Serve the built client (production single-service deploy) ----
 // In dev this folder doesn't exist and Vite serves the client instead, so
@@ -574,7 +97,10 @@ const CLIENT_DIST = join(
 if (!process.env.VERCEL && existsSync(CLIENT_DIST)) {
   app.use(express.static(CLIENT_DIST));
   app.use((req, res, next) => {
-    if (req.method !== "GET" || req.path.startsWith("/api")) return next();
+    // Missing build assets 404 rather than getting index.html as "JavaScript".
+    if (req.method !== "GET" || req.path.startsWith("/api") || req.path.startsWith("/assets/")) {
+      return next();
+    }
     res.sendFile(join(CLIENT_DIST, "index.html"));
   });
 }
@@ -593,19 +119,18 @@ app.use(
       typeof (err as { status?: unknown })?.status === "number"
         ? ((err as { status: number }).status as number)
         : undefined;
-    const status =
-      err instanceof WcaError ||
-      err instanceof AuthError ||
-      err instanceof BillingError
-        ? err.status
-        : middlewareStatus && middlewareStatus >= 400 && middlewareStatus < 500
-          ? middlewareStatus
-          : 500;
+    const domain = err instanceof WcaError || err instanceof AuthError;
+    const status = domain
+      ? err.status
+      : middlewareStatus && middlewareStatus >= 400 && middlewareStatus < 500
+        ? middlewareStatus
+        : 500;
     const message = err instanceof Error ? err.message : "Unexpected error";
     // Surface as a clean 4xx/5xx with actionable context; log server-side.
+    // Unexpected 5xx (e.g. a database error) never echo internals to clients.
     console.error(`[error] ${status} ${message}`);
     res.status(status >= 400 && status < 600 ? status : 500).json({
-      error: message,
+      error: domain || status < 500 ? message : "Something went wrong on our side.",
       status,
     });
   },

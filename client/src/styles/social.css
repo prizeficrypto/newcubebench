@@ -1,0 +1,258 @@
+/* ---------- social: settings, profiles, friends, round boards, shared results ---------- */
+
+.social-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.social-card {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.social-card__title {
+  font-size: 16px;
+}
+
+.social-card__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.social-card .social-select {
+  width: auto;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.social-card__foot {
+  font-size: 13px;
+  margin: 0;
+}
+
+.social-note {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  font-size: 14px;
+}
+
+.social-note a,
+.social-page a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.social__ok {
+  color: var(--good);
+  margin: 0;
+}
+
+.social__bad {
+  color: var(--bad);
+  margin: 0;
+}
+
+.social-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.social-page .social-list__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 4px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  font-size: 15px;
+}
+
+.social-list__row:hover {
+  background: var(--accent-soft);
+}
+
+/* settings */
+
+.social-settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.social-settings__hint {
+  font-size: 13px;
+}
+
+.social-settings__toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.social-settings__toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.social-settings__note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* profile */
+
+.profile__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.profile__meta,
+.profile__counts {
+  margin: 6px 0 0;
+  font-size: 14px;
+}
+
+.profile__bio {
+  margin: 10px 0 0;
+}
+
+/* PB tables */
+
+.pbtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.pbtable th,
+.pbtable td {
+  text-align: left;
+  padding: 7px 6px;
+  border-top: 1px solid var(--border);
+}
+
+.pbtable thead th {
+  border-top: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.pbtable tbody th {
+  font-weight: 500;
+}
+
+.pbtable__me {
+  background: var(--accent-soft);
+}
+
+.pbtable__sort {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--text-tertiary);
+}
+
+.pbtable__sort.is-on {
+  color: var(--accent);
+}
+
+/* round leaderboard (simulator results) */
+
+.rboard {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.rboard__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.rboard__title {
+  font-size: 16px;
+}
+
+.rboard__cta {
+  margin: 0;
+  font-size: 14px;
+}
+
+.rboard__cta a,
+.rboard__name {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.rboard__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rboard__row {
+  display: grid;
+  grid-template-columns: 2em 1fr auto;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+  font-size: 15px;
+}
+
+.rboard__you {
+  margin: 0;
+  font-size: 15px;
+}
+
+.rboard__share {
+  align-self: flex-start;
+  padding: 10px 18px;
+  font-size: 14px;
+}
+
+/* shared result */
+
+.shared {
+  align-items: center;
+  text-align: center;
+}
+
+.shared__avg {
+  font-size: 72px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.shared__place {
+  margin: 0;
+  font-size: 17px;
+}
+
+.shared__attempts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}

@@ -1,5 +1,5 @@
 /**
- * Partial translation dictionary (merged into the main DICT in i18n.tsx).
+ * Partial translation dictionary (merged in ./index.ts, loaded on demand).
  * Keyed by the English source string. Fill fr/ko/es. Cubing terms
  * (Ao5, WCA, 3x3, Megaminx, Pyraminx) stay as-is. No em dashes.
  */
