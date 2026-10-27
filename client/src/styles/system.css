@@ -1,0 +1,550 @@
+/* ==========================================================================
+   Design system layer — loaded LAST (main.tsx), so it sets the shared rules
+   every page builds on: one page grid, Apple-style controls (filled pill
+   selects, segmented controls, quiet buttons), grouped lists like iOS
+   Settings, a frosted nav, and a bottom tab bar on phones.
+   ========================================================================== */
+
+:root {
+  /* one page grid for the nav and every page */
+  --page-max: 1120px;
+  --gutter: 24px;
+  /* iOS-style system fills and hairlines */
+  --fill: rgba(118, 118, 128, 0.12);
+  --fill-hover: rgba(118, 118, 128, 0.18);
+  --separator: rgba(60, 60, 67, 0.13);
+  --radius-sm: 10px;
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2317171a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' opacity='.55'/%3E%3C/svg%3E");
+}
+
+@media (max-width: 640px) {
+  :root {
+    --gutter: 16px;
+  }
+}
+
+/* ---------- page frame ---------- */
+
+.app {
+  padding: 36px var(--gutter) 96px;
+}
+
+.container--wide {
+  max-width: var(--page-max);
+}
+
+/* A quicker, quieter entrance: content settles in rather than floating up. */
+.screen {
+  animation: settle 0.32s var(--ease-out);
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen {
+    animation: none;
+  }
+}
+
+/* ---------- nav: frosted bar on the page grid ---------- */
+
+.nav--app {
+  background: rgba(250, 249, 247, 0.78);
+  border-bottom: 0.5px solid var(--separator);
+}
+
+.nav--app .nav__inner {
+  max-width: var(--page-max);
+  padding: 0 var(--gutter);
+  min-height: 56px;
+  flex-wrap: nowrap;
+}
+
+.nav--app .nav__links {
+  gap: 2px;
+}
+
+.nav--app .nav__link {
+  padding: 0 12px;
+  min-height: 36px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.nav--app .nav__link:hover {
+  color: var(--text);
+}
+
+/* Active tab: ink on a soft fill — present, not shouting. */
+.nav--app .nav__link.is-active {
+  color: var(--text);
+  background: var(--fill);
+}
+
+.nav--app .nav__join {
+  margin-left: 10px;
+  padding: 7px 16px;
+  font-size: 14px;
+  min-height: 34px;
+}
+
+.nav__user-chip {
+  margin-left: 10px;
+}
+
+/* ---------- controls ---------- */
+
+/* Every select: no browser chrome, a calm chevron, consistent height. */
+select.input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: var(--chevron);
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+/* Filled pill select (toolbars): iOS-style gray fill, no border. */
+.pill-select {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 36px;
+  padding: 0 34px 0 14px;
+  border: none;
+  border-radius: 999px;
+  background-color: var(--fill);
+  background-image: var(--chevron);
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  cursor: pointer;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  transition: background-color var(--speed-ui) var(--ease-out);
+}
+
+.pill-select:hover {
+  background-color: var(--fill-hover);
+}
+
+.pill-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Quiet pill button: the secondary action everywhere in the app. */
+.pill {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--fill);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--speed-ui) var(--ease-out), opacity var(--speed-ui) var(--ease-out);
+}
+
+.pill:hover:not(:disabled) {
+  background: var(--fill-hover);
+}
+
+.pill:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+/* Text-only pill (no fill until hovered) for tertiary actions. */
+.pill--plain {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.pill--plain:hover:not(:disabled) {
+  background: var(--fill);
+  color: var(--text);
+}
+
+.pill--sm {
+  height: 30px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.pill--danger {
+  color: var(--bad);
+}
+
+/* Segmented control (iOS): a gray track with a raised white thumb. */
+.tseg {
+  display: inline-flex;
+  padding: 2px;
+  gap: 0;
+  border-radius: 9px;
+  background: var(--fill);
+}
+
+.tseg__btn {
+  appearance: none;
+  border: none;
+  background: none;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background var(--speed-ui) var(--ease-out), box-shadow var(--speed-ui) var(--ease-out);
+  position: relative;
+  padding: 6px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.tseg__btn.is-on {
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.05);
+  font-weight: 600;
+}
+
+/* A hairline between unselected neighbours, like UISegmentedControl. */
+.tseg__btn + .tseg__btn::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 25%;
+  bottom: 25%;
+  width: 1px;
+  background: var(--separator);
+}
+
+.tseg__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tseg__btn.is-on::before,
+.tseg__btn.is-on + .tseg__btn::before {
+  display: none;
+}
+
+/* Inputs: softer edges and a focus halo instead of a hard ring. */
+.input {
+  border-radius: 12px;
+  border: 1px solid var(--separator);
+  transition: border-color var(--speed-ui) var(--ease-out), box-shadow var(--speed-ui) var(--ease-out);
+}
+
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+  outline: none;
+}
+
+/* Cards: hairline + soft depth, same radius everywhere. */
+.card {
+  border: 0.5px solid var(--separator);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(23, 23, 26, 0.03), 0 8px 24px rgba(23, 23, 26, 0.04);
+}
+
+/* ---------- grouped lists (iOS Settings) ---------- */
+
+.group-title {
+  margin: 22px 0 8px;
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.group-title:first-child {
+  margin-top: 0;
+}
+
+.group {
+  background: var(--surface);
+  border: 0.5px solid var(--separator);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.group > * + * {
+  border-top: 0.5px solid var(--separator);
+}
+
+.group-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  min-height: 50px;
+  padding: 8px 16px;
+  font-size: 15px;
+}
+
+.group-row--stack {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 12px 16px;
+}
+
+.group-note {
+  margin: 8px 4px 0;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  line-height: 1.45;
+}
+
+/* iOS switch for boolean settings */
+.switch {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(120, 120, 128, 0.24);
+  cursor: pointer;
+  transition: background var(--speed-ui) var(--ease-out);
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  transition: transform var(--speed-ui) var(--ease-out);
+}
+
+.switch:checked {
+  background: var(--good);
+}
+
+.switch:checked::after {
+  transform: translateX(18px);
+}
+
+/* ---------- Settings page ---------- */
+
+.settings .settings__section {
+  padding: 0;
+  overflow: hidden;
+}
+
+.settings .settings__title {
+  margin: 0;
+  padding: 16px 18px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.settings .settings__section > :not(.settings__title) {
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.settings .settings__section > :last-child {
+  padding-bottom: 16px;
+}
+
+.settings .settings__langs {
+  gap: 0;
+  padding: 0 !important;
+}
+
+.settings .settings__langs .lvl {
+  min-height: 48px;
+  padding: 0 18px;
+  border: none;
+  border-top: 0.5px solid var(--separator);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings .settings__langs .lvl:hover {
+  background: rgba(118, 118, 128, 0.06);
+}
+
+.settings .settings__langs .lvl.is-selected {
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings .settings__langs .lvl.is-selected .lvl__range {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ---------- footer ---------- */
+
+.app-foot {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  border-top: 0.5px solid var(--separator);
+  margin-top: 32px;
+}
+
+/* ---------- phones: bottom tab bar instead of a wrapping nav ---------- */
+
+.tabbar {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .nav--app .nav__links .nav__link {
+    display: none;
+  }
+  .nav--app .nav__inner {
+    min-height: 52px;
+  }
+  .nav--app .nav__mark {
+    display: block;
+  }
+  .app {
+    padding-top: 20px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+  .app-foot {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+  .tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    background: rgba(250, 249, 247, 0.86);
+    backdrop-filter: saturate(180%) blur(18px);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+    border-top: 0.5px solid var(--separator);
+  }
+  .tabbar__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 48px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* a small dot marks the current tab (no icon set — type carries it) */
+  .tabbar__item::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: transparent;
+  }
+  .tabbar__item.is-active {
+    color: var(--accent);
+  }
+  .tabbar__item.is-active::before {
+    background: var(--accent);
+  }
+  /* focus mode also clears the tab bar while a solve is timed */
+  body[data-timing="1"]:has(.ttimer--zen) .tabbar {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* ---------- section headings match the grouped-list style ---------- */
+
+.picker__section-title {
+  margin: 26px 0 10px;
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* large titles, Apple-style: bold, tight, no redundant eyebrow needed */
+.title {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.028em;
+}
+
+@media (max-width: 640px) {
+  .title {
+    font-size: 28px;
+  }
+}
+
+/* ---------- type: SF Pro, Apple-style ---------- */
+
+/* Big running times in the light stopwatch weight of Apple's Clock app. */
+.tzone__time,
+.timer__time,
+.shared__avg {
+  font-weight: 300;
+  letter-spacing: -0.03em;
+}
+
+/* Numbers everywhere use SF's tabular figures; mid-size stats read best at
+   regular-to-medium weight with natural tracking. */
+.mono {
+  letter-spacing: 0;
+}
+
+.switch--sm {
+  width: 38px;
+  height: 23px;
+}
+
+.switch--sm::after {
+  width: 19px;
+  height: 19px;
+}
+
+.switch--sm:checked::after {
+  transform: translateX(15px);
+}

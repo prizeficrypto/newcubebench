@@ -67,7 +67,6 @@ export default function Friends() {
 
   return (
     <div className="screen container social-page">
-      <span className="eyebrow">{t("Friends")}</span>
       <h1 className="title">{t("Friends")}</h1>
       {me && !me.handle && (
         <p className="social-note">

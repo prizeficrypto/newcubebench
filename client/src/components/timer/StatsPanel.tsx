@@ -49,11 +49,11 @@ export function StatsPanel({
   return (
     <div className="card tstats">
       <div className="tstats__grid">
-        <Stat label={t("Solves")} value={`${stats.nonDnf}/${stats.count}`} />
-        <Stat label={t("Mean")} value={formatStat(stats.mean, precision)} />
-        <Stat label={t("Best")} value={formatStat(stats.best, precision)} />
-        <Stat label={t("Worst")} value={formatStat(stats.worst, precision)} />
-        <Stat label="σ" value={stats.sd === undefined ? "–" : formatTime(stats.sd, precision)} />
+        <Stat label={t("Solves")} hint={t("Finished solves / all solves (DNFs included)")} value={`${stats.nonDnf}/${stats.count}`} />
+        <Stat label={t("Mean")} hint={t("Average of every solve in this session, DNFs left out")} value={formatStat(stats.mean, precision)} />
+        <Stat label={t("Best")} hint={t("Your fastest single in this session")} value={formatStat(stats.best, precision)} />
+        <Stat label={t("Worst")} hint={t("Your slowest finished single in this session")} value={formatStat(stats.worst, precision)} />
+        <Stat label="σ" raw hint={t("Consistency: how far your times spread. Lower is steadier.")} value={stats.sd === undefined ? "–" : formatTime(stats.sd, precision)} />
       </div>
 
       <table className="tstats__table">
@@ -67,7 +67,7 @@ export function StatsPanel({
         <tbody>
           {stats.indicators.map((ind) => (
             <tr key={ind.key}>
-              <th scope="row">{ind.key}</th>
+              <th scope="row" title={explain(ind.key, t)}>{ind.key}</th>
               <td>
                 <button
                   className="tstats__cell mono"
@@ -123,7 +123,7 @@ export function StatsPanel({
           </ol>
         )}
         {n > shown && (
-          <button className="btn btn--ghost tlist__more" onClick={() => setShown((v) => v + 200)}>
+          <button className="pill pill--plain tlist__more" onClick={() => setShown((v) => v + 200)}>
             {t("Show more")}
           </button>
         )}
@@ -152,10 +152,19 @@ export function StatsPanel({
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+/** What an average means, for the row's tooltip ("ao5" → plain words). */
+function explain(key: string, t: (k: string) => string): string {
+  const n = key.slice(2);
+  return key.startsWith("mo")
+    ? t("Mean of {n}: the average of your last {n} solves.").replace(/\{n\}/g, n)
+    : t("Average of {n}: your last {n} solves with the best and worst dropped, like an official WCA average.").replace(/\{n\}/g, n);
+}
+
+/** `raw` keeps the label's case (σ must not become Σ). */
+function Stat({ label, value, raw, hint }: { label: string; value: string; raw?: boolean; hint?: string }) {
   return (
-    <div className="tstats__stat">
-      <span className="tstats__label">{label}</span>
+    <div className="tstats__stat" title={hint}>
+      <span className={`tstats__label${raw ? " tstats__label--raw" : ""}`}>{label}</span>
       <span className="tstats__value mono">{value}</span>
     </div>
   );

@@ -6,6 +6,7 @@
 export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
   fr: {
     "Friends": "Amis",
+    "Sections": "Sections",
     "Privacy": "Confidentialité",
     // settings
     "Available": "Disponible",
@@ -71,6 +72,7 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
   },
   ko: {
     "Friends": "친구",
+    "Sections": "섹션",
     "Privacy": "개인정보",
     "Available": "사용 가능",
     "3 to 20 letters, numbers or underscores": "영문, 숫자, 밑줄로 3~20자",
@@ -131,6 +133,7 @@ export const dict: Record<"fr" | "ko" | "es", Record<string, string>> = {
   },
   es: {
     "Friends": "Amigos",
+    "Sections": "Secciones",
     "Privacy": "Privacidad",
     "Available": "Disponible",
     "3 to 20 letters, numbers or underscores": "De 3 a 20 letras, números o guiones bajos",

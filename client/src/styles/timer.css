@@ -24,35 +24,56 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
 
 /* ---------- toolbar ---------- */
 
+/* One quiet row: what you're timing on the left, actions on the right. */
 .ttimer__bar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  flex-wrap: wrap;
+}
+
+.ttimer__pickers {
+  display: flex;
   gap: 8px;
-}
-
-/* (doubled class: beats the shared .input width, which loads later) */
-.ttimer .ttimer__session,
-.ttimer .ttimer__event {
-  width: auto;
   min-width: 0;
-  padding: 9px 12px;
-  font-size: 15px;
 }
 
-.ttimer .ttimer__session {
-  max-width: 260px;
+.ttimer__session {
+  max-width: 240px;
 }
 
 .ttimer__actions {
   display: flex;
   gap: 2px;
-  margin-left: auto;
 }
 
-.ttimer__actions .btn {
-  padding: 9px 12px;
-  font-size: 14px;
+@media (max-width: 640px) {
+  .ttimer__bar {
+    gap: 6px;
+  }
+  .ttimer__pickers {
+    width: 100%;
+  }
+  .ttimer__session {
+    flex: 1;
+    max-width: none;
+  }
+  /* actions spread across one row under the pickers (scrolls if a very
+     narrow phone can't fit them) */
+  .ttimer__actions {
+    width: 100%;
+    justify-content: space-between;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .ttimer__actions .pill {
+    padding: 0 8px;
+    font-size: 13px;
+  }
+  .ttimer__actions::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* ---------- layout ---------- */
@@ -60,14 +81,14 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
 .ttimer__layout {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 22px;
+  gap: 24px;
   align-items: start;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 960px) {
   .ttimer__layout {
-    grid-template-columns: minmax(0, 1.25fr) minmax(330px, 1fr);
-    gap: 32px;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 40px;
   }
 }
 
@@ -75,9 +96,10 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
   min-width: 0;
   position: relative;
+  padding-top: 8px;
 }
 
 .ttimer__side {
@@ -88,13 +110,18 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
 }
 
 .ttimer__sim {
-  font-size: 14px;
+  font-size: 13px;
   margin: 0;
+  text-align: center;
 }
 
 .ttimer__sim a {
   color: var(--accent);
   text-decoration: none;
+}
+
+.ttimer__sim a:hover {
+  text-decoration: underline;
 }
 
 .ttimer__ad {
@@ -108,37 +135,40 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  min-height: 92px;
+  gap: 6px;
+  min-height: 96px;
 }
 
 .tscramble__text {
   appearance: none;
   border: none;
   background: none;
-  padding: 6px 10px;
-  border-radius: var(--radius);
-  font-size: 20px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  font-size: 22px;
   font-weight: 500;
-  line-height: 1.7;
+  line-height: 1.6;
+  letter-spacing: 0.005em;
+  word-spacing: 0.14em;
   color: var(--text);
   text-align: center;
-  max-width: 640px;
-  word-spacing: 0.12em;
+  max-width: 680px;
   cursor: copy;
+  transition: background var(--speed-ui) var(--ease-out);
 }
 
 .tscramble__text:hover {
-  background: var(--accent-soft);
+  background: rgba(118, 118, 128, 0.07);
 }
 
 .tscramble__text.is-long {
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 .tscramble__loading {
-  padding: 14px 0;
+  padding: 16px 0;
+  font-size: 15px;
 }
 
 .tscramble__nav {
@@ -146,14 +176,15 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
   gap: 2px;
 }
 
-.tscramble__nav .btn {
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
 .tscramble__note {
   font-size: 12px;
   margin: 0;
+}
+
+@media (max-width: 640px) {
+  .tscramble__text {
+    font-size: 18px;
+  }
 }
 
 /* ---------- the timer zone ---------- */
@@ -225,9 +256,25 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
 
 .tzone__avgs {
   display: flex;
-  gap: 18px;
-  font-size: 15px;
-  color: var(--text-secondary);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.tzone__avg {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--fill);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.tzone__avg-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
 }
 
 /* ---------- typing, hardware, post-solve ---------- */
@@ -308,70 +355,102 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
 /* ---------- stats + list ---------- */
 
 .tstats {
-  padding: 20px 22px;
+  padding: 18px 18px 12px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
+/* Summary: five numbers on one baseline, evenly spaced. */
+/* Wraps to a second row on narrow screens instead of overlapping. */
 .tstats__grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  gap: 12px 8px;
+  padding: 0 4px;
 }
 
 .tstats__stat {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 
 .tstats__label {
+  line-height: 16px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-tertiary);
 }
 
+.tstats__label--raw {
+  text-transform: none;
+}
+
 .tstats__value {
-  font-size: 16px;
+  font-size: 17px;
+  font-weight: 500;
   color: var(--text);
   white-space: nowrap;
 }
 
+/* Averages table: label, then right-aligned Current and Best columns. */
 .tstats__table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 15px;
 }
 
-.tstats__table th {
-  text-align: left;
-  font-weight: 500;
+.tstats__table th,
+.tstats__table td {
+  padding: 0;
+  height: 34px;
+  border-top: 0.5px solid var(--separator);
+}
+
+.tstats__table thead th {
+  height: 26px;
+  border-top: none;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--text-tertiary);
-  font-size: 13px;
-  padding: 4px 0;
+  text-align: right;
+  padding-right: 4px;
 }
 
 .tstats__table tbody th {
+  text-align: left;
   font-family: var(--mono);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-secondary);
+  padding-left: 4px;
+}
+
+.tstats__table td {
+  text-align: right;
 }
 
 .tstats__cell {
   appearance: none;
   border: none;
   background: none;
-  padding: 4px 6px;
-  margin-left: -6px;
+  margin: 0;
+  padding: 4px 4px;
   border-radius: 8px;
   font-size: 15px;
   color: var(--text);
+  transition: background var(--speed-ui) var(--ease-out);
 }
 
 .tstats__cell:hover:not(:disabled) {
-  background: var(--accent-soft);
+  background: var(--fill);
 }
 
 .tstats__cell:disabled {
@@ -379,30 +458,42 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
   cursor: default;
 }
 
+/* Time list: # | time | ao5 | ao12, numbers right-aligned on one grid. */
 .tlist {
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
+  border-top: 0.5px solid var(--separator);
+  padding-top: 10px;
+  margin: 0 -6px;
 }
 
 .tlist__head,
 .tlist__row {
   display: grid;
-  grid-template-columns: 3.2em 1fr 1fr 1fr;
+  grid-template-columns: 3em repeat(3, minmax(0, 1fr));
   gap: 8px;
   align-items: baseline;
+  padding: 0 10px;
 }
 
 .tlist__head {
-  font-size: 12px;
-  padding: 0 8px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding-bottom: 6px;
+}
+
+.tlist__head > :not(:first-child),
+.tlist__row > :not(:first-child) {
+  text-align: right;
 }
 
 .tlist__rows {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 360px;
+  max-height: 380px;
   overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .tlist__row {
@@ -412,13 +503,14 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
   background: none;
   text-align: left;
   font-size: 15px;
-  padding: 6px 8px;
-  border-radius: 8px;
+  height: 36px;
+  border-radius: 10px;
   color: var(--text);
+  transition: background var(--speed-ui) var(--ease-out);
 }
 
 .tlist__row:hover {
-  background: var(--accent-soft);
+  background: rgba(118, 118, 128, 0.08);
 }
 
 .tlist__pb {
@@ -427,82 +519,119 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
 }
 
 .tlist__empty {
-  margin: 8px;
+  margin: 10px;
   font-size: 14px;
 }
 
 .tlist__more {
   width: 100%;
   margin-top: 6px;
-  font-size: 14px;
 }
 
 .ttools-loading {
   min-height: 120px;
 }
 
-/* ---------- dialogs ---------- */
+/* ---------- dialogs (iOS sheet: gray ground, white grouped cards) ---------- */
 
 .tdialog {
-  width: min(460px, calc(100vw - 32px));
-  max-height: calc(100vh - 48px);
+  width: min(480px, calc(100vw - 32px));
+  max-height: min(86vh, 760px);
   padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
+  border: none;
+  border-radius: 22px;
+  background: #f2f2f4;
   color: var(--text);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22), 0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.tdialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: sheet-in 0.26s var(--ease-out);
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .tdialog--wide {
-  width: min(640px, calc(100vw - 32px));
+  width: min(600px, calc(100vw - 32px));
 }
 
 .tdialog::backdrop {
-  background: rgba(23, 23, 26, 0.28);
+  background: rgba(20, 20, 24, 0.32);
+  backdrop-filter: blur(2px);
 }
 
 .tdialog__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px 8px;
+  gap: 12px;
+  padding: 16px 16px 10px 22px;
 }
 
 .tdialog__title {
-  font-size: 18px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-.tdialog__close {
-  padding: 8px 12px;
+/* "Close" reads like an iOS sheet's Done: quiet, top-right. */
+.tdialog .tdialog__close {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--text);
   font-size: 14px;
+  font-weight: 600;
+}
+
+.tdialog .tdialog__close:hover {
+  background: var(--fill-hover);
 }
 
 .tdialog__body {
-  padding: 8px 20px 22px;
+  padding: 6px 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+  overflow-y: auto;
 }
 
 .tsolve {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 14px;
+  background: var(--surface);
 }
 
 .tsolve__time {
-  font-size: 40px;
+  font-size: 44px;
   font-weight: 500;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
+  line-height: 1;
 }
 
 .tsolve__scramble {
   appearance: none;
   border: none;
+  width: 100%;
   background: var(--bg);
-  border-radius: var(--radius);
+  border-radius: 12px;
   padding: 10px 12px;
   font-size: 15px;
   line-height: 1.6;
@@ -514,7 +643,7 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
 .tsolve__comment {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
   font-size: 13px;
 }
@@ -531,39 +660,25 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
 
 .treport {
   margin: 0;
-  padding: 12px;
-  background: var(--bg);
-  border-radius: var(--radius);
+  padding: 14px;
+  background: var(--surface);
+  border-radius: 14px;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.65;
   white-space: pre-wrap;
   max-height: 50vh;
   overflow: auto;
 }
 
-/* settings */
+/* settings rows live inside .group cards (system.css) */
 
 .tset {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.tset__group {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin-top: 8px;
 }
 
 .tset__row {
-  display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
 }
 
 .tset__label {
@@ -572,73 +687,56 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
 
 .tset__note {
   font-size: 13px;
-  margin: -4px 0 0;
+  margin: 0;
+  min-height: 0;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  line-height: 1.45;
 }
 
-.tset .tset__select {
-  width: auto;
-  max-width: 260px;
-  padding: 8px 12px;
-  font-size: 14px;
+.tset__select {
+  max-width: 240px;
 }
 
-.tset__test {
-  padding: 8px 14px;
-  font-size: 14px;
-}
-
-.tset__toggle input {
-  width: 20px;
-  height: 20px;
+.tset__row input[type="range"] {
+  flex: 1;
+  min-width: 120px;
+  max-width: 220px;
   accent-color: var(--accent);
 }
 
 .tset__checks {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 12px;
+  gap: 6px;
 }
 
+/* indicator choices as small toggle chips */
 .tset__check {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 14px;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.tset__checks .tset__check {
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  background: var(--fill);
 }
 
 .tset__check input {
   accent-color: var(--accent);
+  margin: 0;
 }
 
-.tseg {
-  display: inline-flex;
-  flex-wrap: wrap;
-  padding: 3px;
-  gap: 2px;
-  border-radius: 12px;
-  background: rgba(23, 23, 26, 0.05);
-}
-
-.tseg__btn {
-  appearance: none;
-  border: none;
-  background: none;
-  padding: 7px 12px;
-  border-radius: 9px;
-  font-size: 14px;
-  color: var(--text-secondary);
-  transition: background var(--speed-ui) var(--ease-out), color var(--speed-ui) var(--ease-out);
-}
-
-.tseg__btn.is-on {
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--shadow-sm);
-}
-
-.tseg__btn:disabled {
-  opacity: 0.4;
-  cursor: default;
+@media (max-width: 520px) {
+  .tset__row .tseg {
+    width: 100%;
+  }
+  .tset__row .tseg__btn {
+    flex: 1;
+  }
 }
 
 /* sessions */
@@ -647,30 +745,32 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
 .tsess__row {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 6px 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 10px;
   align-items: center;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
+  padding: 12px 14px;
 }
 
-.tsess .tsess__name,
-.tsess .tsess__event,
-.tsess .tsess__merge {
-  padding: 8px 10px;
-  font-size: 14px;
-  width: auto;
+.tsess .tsess__name {
+  padding: 8px 12px;
+  font-size: 15px;
+  font-weight: 500;
+  border-color: transparent;
+  background: var(--bg);
+}
+
+.tsess .tsess__name:focus {
+  background: var(--surface);
 }
 
 .tsess__meta {
+  grid-column: 1 / -1;
   font-size: 13px;
+  order: 3;
 }
 
 .tsess__actions {
@@ -679,26 +779,17 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
   flex-wrap: wrap;
   gap: 4px;
   align-items: center;
+  order: 4;
 }
 
-.tsess__actions .btn {
-  padding: 6px 10px;
-  font-size: 14px;
+.tsess__merge {
+  height: 30px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
-@media (max-width: 560px) {
-  .ttimer__actions {
-    margin-left: 0;
-    width: 100%;
-    justify-content: space-between;
-  }
-  .tstats__grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .tzone,
-  .ttyping {
-    min-height: 240px;
-  }
+.tsess__new {
+  align-self: flex-start;
 }
 
 /* import / export */
@@ -787,18 +878,35 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
 /* tools panel */
 
 .ttools {
-  padding: 16px 18px 20px;
+  padding: 14px 16px 18px;
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
+/* One row of tool tabs that scrolls sideways instead of wrapping. */
 .ttools__tabs {
-  align-self: flex-start;
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-wrap: nowrap;
+}
+
+.ttools__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* hint that more tabs scroll in from the right */
+.ttools__tabs {
+  -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
+  mask-image: linear-gradient(to right, #000 85%, transparent);
+  padding-right: 24px;
 }
 
 .ttools__tabs .tseg__btn {
-  padding: 6px 10px;
+  flex: none;
+  padding: 6px 11px;
   font-size: 13px;
 }
 
@@ -979,7 +1087,40 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
 .tdaily {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+}
+
+.tdaily__ranges {
+  align-self: flex-start;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+.tdaily__custom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.tdaily__custom label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.tdaily__custom .input {
+  padding: 8px 10px;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.tdaily__all {
+  display: flex;
+  align-items: center;
   gap: 10px;
+  font-size: 14px;
 }
 
 .tdaily__bars {
@@ -1020,4 +1161,117 @@ body[data-timing="1"]:has(.ttimer--zen) .app-foot {
 .tdaily__total {
   margin: 0;
   font-size: 13px;
+}
+
+/* ---------- toolbar: new-session button ---------- */
+
+.ttimer__new {
+  flex: none;
+  padding: 0 14px 0 12px;
+  font-weight: 600;
+}
+
+.ttimer__new span[aria-hidden] {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+@media (max-width: 380px) {
+  .ttimer__new-label {
+    display: none;
+  }
+  .ttimer__new {
+    width: 36px;
+    padding: 0;
+  }
+}
+
+/* ---------- phones: the timer is the screen (like csTimer) ---------- */
+
+@media (max-width: 720px) {
+  .ttimer {
+    gap: 12px;
+  }
+  .ttimer__main {
+    padding-top: 0;
+  }
+  .tscramble {
+    min-height: 0;
+  }
+  /* the tap target fills most of the first screen */
+  .tzone {
+    min-height: max(260px, 44svh);
+  }
+  .tzone__time {
+    font-size: clamp(76px, 24vw, 112px);
+  }
+  .ttyping {
+    min-height: max(220px, 36svh);
+  }
+}
+
+/* ---------- new-session sheet ---------- */
+
+.tnew__lead {
+  margin: 0 4px 4px;
+}
+
+.tnew__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+}
+
+.tnew__puzzle {
+  appearance: none;
+  height: 44px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 12px;
+  background: var(--surface);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 0.5px var(--separator);
+  transition: background var(--speed-ui) var(--ease-out), box-shadow var(--speed-ui) var(--ease-out);
+}
+
+.tnew__puzzle:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.tnew__puzzle.is-on {
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.tdialog .tnew__name {
+  padding: 12px 14px;
+  font-size: 16px;
+  background: var(--surface);
+}
+
+.tnew__create {
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* ---------- help sheet ---------- */
+
+.thelp__row {
+  gap: 4px;
+}
+
+.thelp__title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.thelp__body {
+  font-size: 14px;
+  line-height: 1.5;
 }

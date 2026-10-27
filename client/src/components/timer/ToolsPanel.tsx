@@ -163,58 +163,102 @@ function dayKey(ms: number): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
-/** Solves per day for the last 14 or 30 days, this session or all of them. */
+/** YYYY-MM-DD for a date input, in local time. */
+function isoDay(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+const RANGES = [7, 14, 30, 90] as const;
+
+/**
+ * Solves per day for a chosen range (last 7/14/30/90 days or any custom
+ * from–to), this session or all of them. Long ranges group by week so the
+ * bars stay readable.
+ */
 function Daily({ session }: { session: TimerSession }) {
   const { t, lang } = useT();
-  const [days, setDays] = useState(14);
+  const today = new Date();
+  const [range, setRange] = useState<number | "custom">(14);
+  const [from, setFrom] = useState(() => isoDay(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 29)));
+  const [to, setTo] = useState(() => isoDay(today));
   const [all, setAll] = useState(false);
+
   const rows = useMemo(() => {
     const counts = new Map<string, number>();
     const sources = all ? timerStore.sessions() : [session];
     for (const s of sources) for (const x of s.solves) counts.set(dayKey(x.at), (counts.get(dayKey(x.at)) ?? 0) + 1);
-    const out: { label: string; n: number }[] = [];
-    const today = new Date();
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
-      out.push({
-        label: d.toLocaleDateString(lang, { month: "short", day: "numeric" }),
-        n: counts.get(dayKey(d.getTime())) ?? 0,
-      });
+    // The window: the last N days, or the custom dates (swapped if reversed).
+    let start: Date;
+    let end: Date;
+    if (range === "custom") {
+      const a = new Date(`${from}T00:00:00`);
+      const b = new Date(`${to}T00:00:00`);
+      [start, end] = a <= b ? [a, b] : [b, a];
+    } else {
+      end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - (range - 1));
     }
-    return out;
+    const days: { date: Date; n: number }[] = [];
+    for (let d = new Date(start); d <= end && days.length < 731; d.setDate(d.getDate() + 1)) {
+      days.push({ date: new Date(d), n: counts.get(dayKey(d.getTime())) ?? 0 });
+    }
+    const fmt = (d: Date) => d.toLocaleDateString(lang, { month: "short", day: "numeric" });
+    if (days.length <= 62) return { weekly: false, bars: days.map((d) => ({ label: fmt(d.date), n: d.n })) };
+    const weeks: { label: string; n: number }[] = [];
+    for (let i = 0; i < days.length; i += 7) {
+      const chunk = days.slice(i, i + 7);
+      weeks.push({ label: fmt(chunk[0].date), n: chunk.reduce((a, d) => a + d.n, 0) });
+    }
+    return { weekly: true, bars: weeks };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.id, session.updatedAt, days, all, lang]);
-  const top = Math.max(1, ...rows.map((r) => r.n));
-  const total = rows.reduce((a, r) => a + r.n, 0);
+  }, [session.id, session.updatedAt, range, from, to, all, lang]);
+
+  const top = Math.max(1, ...rows.bars.map((r) => r.n));
+  const total = rows.bars.reduce((a, r) => a + r.n, 0);
   return (
     <div className="tdaily">
-      <div className="tgen__row">
-        <div className="tseg">
-          {[14, 30].map((d) => (
-            <button key={d} className={`tseg__btn${days === d ? " is-on" : ""}`} onClick={() => setDays(d)}>
-              {d} {t("days")}
-            </button>
-          ))}
-        </div>
-        <label className="tset__check">
-          <input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} />
-          {t("All sessions")}
-        </label>
+      <div className="tseg tdaily__ranges" role="radiogroup" aria-label={t("Time frame")}>
+        {RANGES.map((d) => (
+          <button key={d} role="radio" aria-checked={range === d} className={`tseg__btn${range === d ? " is-on" : ""}`} onClick={() => setRange(d)}>
+            {d}d
+          </button>
+        ))}
+        <button role="radio" aria-checked={range === "custom"} className={`tseg__btn${range === "custom" ? " is-on" : ""}`} onClick={() => setRange("custom")}>
+          {t("Custom")}
+        </button>
       </div>
+      {range === "custom" && (
+        <div className="tdaily__custom">
+          <label>
+            <span className="tertiary">{t("From")}</span>
+            <input type="date" className="input" value={from} max={to} onChange={(e) => e.target.value && setFrom(e.target.value)} />
+          </label>
+          <label>
+            <span className="tertiary">{t("To")}</span>
+            <input type="date" className="input" value={to} min={from} onChange={(e) => e.target.value && setTo(e.target.value)} />
+          </label>
+        </div>
+      )}
+      <label className="tdaily__all">
+        <input type="checkbox" role="switch" className="switch switch--sm" checked={all} onChange={(e) => setAll(e.target.checked)} />
+        <span>{t("Include all sessions")}</span>
+      </label>
       <div className="tdaily__bars" role="img" aria-label={`${total} ${t("solves")}`}>
-        {rows.map((r, i) => (
+        {rows.bars.map((r, i) => (
           <div key={i} className="tdaily__col" title={`${r.label}: ${r.n}`}>
-            <span className="mono tertiary tdaily__n">{r.n || ""}</span>
+            {rows.bars.length <= 31 && <span className="mono tertiary tdaily__n">{r.n || ""}</span>}
             <span className="tdaily__bar" style={{ height: `${(r.n / top) * 100}%` }} />
           </div>
         ))}
       </div>
       <div className="tdaily__axis tertiary">
-        <span>{rows[0]?.label}</span>
-        <span>{rows[rows.length - 1]?.label}</span>
+        <span>{rows.bars[0]?.label}</span>
+        <span>{rows.bars[rows.bars.length - 1]?.label}</span>
       </div>
       <p className="tertiary tdaily__total">
         <span className="mono">{total}</span> {t("solves")}
+        {rows.weekly ? ` · ${t("by week")}` : ""}
       </p>
     </div>
   );

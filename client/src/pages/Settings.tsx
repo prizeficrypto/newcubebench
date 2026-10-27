@@ -22,7 +22,6 @@ export default function Settings() {
   return (
     <div className="screen container settings">
       <div className="settings__head">
-        <span className="eyebrow">{t("Settings")}</span>
         <h1 className="title">{t("Settings")}</h1>
       </div>
 

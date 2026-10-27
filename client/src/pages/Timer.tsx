@@ -4,10 +4,16 @@ import { useT } from "../lib/i18n.tsx";
 import { AdSlot } from "../components/AdSlot.tsx";
 import { useTimerEngine } from "../components/timer/useTimerEngine.ts";
 import { PenaltyChips, StatsPanel } from "../components/timer/StatsPanel.tsx";
-import { SessionsDialog, SettingsDialog } from "../components/timer/TimerDialogs.tsx";
+import {
+  HelpDialog,
+  NewSessionDialog,
+  SessionsDialog,
+  SettingsDialog,
+} from "../components/timer/TimerDialogs.tsx";
+import { isTouchDevice } from "../lib/pointer.ts";
 import { formatSolve, formatTime } from "../lib/timer/format.ts";
 import { newId, effectiveMs, type Penalty, type SolveSource } from "../lib/timer/model.ts";
-import { eventName, TIMER_EVENTS } from "../lib/timer/puzzles.ts";
+import { TIMER_EVENTS } from "../lib/timer/puzzles.ts";
 import { settingsIndicators, useTimerSettings } from "../lib/timer/settings.ts";
 import { sessionStats } from "../lib/timer/stats.ts";
 import { timerStore, useTimerStore } from "../lib/timer/storage.ts";
@@ -47,7 +53,8 @@ export default function Timer() {
   const { sessions, active } = useTimerStore();
   const event = active?.event ?? "333";
   const precision = settings.precision;
-  const [dialog, setDialog] = useState<"settings" | "sessions" | "io" | null>(null);
+  const [dialog, setDialog] = useState<"settings" | "sessions" | "io" | "new" | "help" | null>(null);
+  const [touch] = useState(isTouchDevice);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout>>();
   const say = useCallback((msg: string) => {
@@ -278,13 +285,11 @@ export default function Timer() {
   return (
     <div className={`screen container--wide ttimer${settings.zen ? " ttimer--zen" : ""}`}>
       <div className="ttimer__bar tz-hide">
+        <div className="ttimer__pickers">
         <select
-          className="input ttimer__session"
+          className="pill-select ttimer__session"
           value={active?.id ?? ""}
-          onChange={(e) => {
-            if (e.target.value === "__new") timerStore.create(t(eventName(event)), event);
-            else timerStore.setActive(e.target.value);
-          }}
+          onChange={(e) => timerStore.setActive(e.target.value)}
           aria-label={t("Session")}
         >
           {sessions.map((s) => (
@@ -292,10 +297,18 @@ export default function Timer() {
               {s.name} · {s.solves.length}
             </option>
           ))}
-          <option value="__new">{t("New session…")}</option>
         </select>
+        <button
+          className="pill ttimer__new"
+          onClick={() => setDialog("new")}
+          aria-label={t("New session")}
+          title={t("New session")}
+        >
+          <span aria-hidden="true">+</span>
+          <span className="ttimer__new-label">{t("New")}</span>
+        </button>
         <select
-          className="input ttimer__event"
+          className="pill-select ttimer__event"
           value={event}
           onChange={(e) => active && timerStore.update(active.id, (x) => ({ ...x, event: e.target.value }))}
           aria-label={t("Puzzle")}
@@ -306,15 +319,19 @@ export default function Timer() {
             </option>
           ))}
         </select>
+        </div>
         <div className="ttimer__actions">
-          <button className="btn btn--ghost" onClick={() => setDialog("sessions")}>
+          <button className="pill pill--plain" onClick={() => setDialog("sessions")}>
             {t("Sessions")}
           </button>
-          <button className="btn btn--ghost" onClick={() => setDialog("io")}>
+          <button className="pill pill--plain" onClick={() => setDialog("io")}>
             {t("Import / Export")}
           </button>
-          <button className="btn btn--ghost" onClick={() => setDialog("settings")}>
+          <button className="pill pill--plain" onClick={() => setDialog("settings")}>
             {t("Settings")}
+          </button>
+          <button className="pill pill--plain" onClick={() => setDialog("help")}>
+            {t("Help")}
           </button>
         </div>
       </div>
@@ -339,11 +356,11 @@ export default function Timer() {
               <span className="tscramble__loading tertiary">{t("Generating a scramble…")}</span>
             )}
             <div className="tscramble__nav">
-              <button className="btn btn--ghost" disabled={pos <= 0} onClick={() => stepScramble(-1)}>
+              <button className="pill pill--plain pill--sm" disabled={pos <= 0} onClick={() => stepScramble(-1)}>
                 {t("Previous")}
               </button>
               <button
-                className="btn btn--ghost"
+                className="pill pill--plain pill--sm"
                 onClick={() => {
                   const text = window.prompt(t("Paste your own scramble(s), one per line:"));
                   if (!text) return;
@@ -358,7 +375,7 @@ export default function Timer() {
               >
                 {t("Use my own")}
               </button>
-              <button className="btn btn--ghost" onClick={() => stepScramble(1)}>
+              <button className="pill pill--plain pill--sm" onClick={() => stepScramble(1)}>
                 {t("Next")}
               </button>
             </div>
@@ -421,15 +438,18 @@ export default function Timer() {
                 </div>
               )}
               <div className="tzone__hint tz-hide" role="status">
-                {hint(t, state.phase, state.hold, settings.inspection, external, hwStatus)}
+                {hint(t, state.phase, state.hold, settings.inspection, external, hwStatus, touch)}
               </div>
               {!animating && (
-                <div className="tzone__avgs tz-hide mono">
+                <div className="tzone__avgs tz-hide">
                   {["ao5", "ao12"].map((k) => {
                     const ind = ao(k);
                     return ind ? (
-                      <span key={k}>
-                        {k}: {ind.current === undefined ? "–" : Number.isFinite(ind.current) ? formatTime(ind.current, precision) : "DNF"}
+                      <span key={k} className="tzone__avg">
+                        <span className="tzone__avg-label">{k}</span>
+                        <span className="mono">
+                          {ind.current === undefined ? "–" : Number.isFinite(ind.current) ? formatTime(ind.current, precision) : "DNF"}
+                        </span>
                       </span>
                     ) : null;
                   })}
@@ -464,7 +484,7 @@ export default function Timer() {
               )}
               <div className="tpost__more">
                 <button
-                  className="btn btn--ghost"
+                  className="pill pill--plain pill--sm"
                   onClick={() => {
                     const c = window.prompt(t("Comment"), latest.comment ?? "");
                     if (c !== null) timerStore.updateSolve(active.id, latest.id, { comment: c.trim() || undefined });
@@ -473,7 +493,7 @@ export default function Timer() {
                   {latest.comment ? t("Edit comment") : t("Add comment")}
                 </button>
                 <button
-                  className="btn btn--ghost"
+                  className="pill pill--plain pill--sm pill--danger"
                   onClick={() => {
                     timerStore.deleteSolve(active.id, latest.id);
                     dispatch({ type: "reset" });
@@ -514,6 +534,8 @@ export default function Timer() {
 
       {dialog === "settings" && <SettingsDialog onClose={() => setDialog(null)} />}
       {dialog === "sessions" && <SessionsDialog onClose={() => setDialog(null)} />}
+      {dialog === "new" && <NewSessionDialog defaultEvent={event} onClose={() => setDialog(null)} />}
+      {dialog === "help" && <HelpDialog onClose={() => setDialog(null)} />}
       {dialog === "io" && (
         <Suspense fallback={null}>
           <ImportExportDialog open onClose={() => setDialog(null)} />
@@ -530,8 +552,9 @@ function hint(
   inspection: boolean,
   external: boolean,
   hw: HardwareStatus | "off",
+  touch: boolean,
 ): string {
-  if (phase === "running") return external ? "" : t("Any key or tap to stop");
+  if (phase === "running") return external ? "" : touch ? t("Tap anywhere to stop") : t("Any key or tap to stop");
   if (hold === "ready") return external ? t("Ready, lift your hands to start") : t("Release to start");
   if (hold === "holding") return t("Keep holding");
   if (phase === "inspecting") return external ? t("Inspecting. Start the timer when ready.") : t("Inspecting. Hold, then release to start.");
@@ -539,8 +562,8 @@ function hint(
     if (hw !== "connected") return "";
     return inspection ? t("Press space or tap here to start inspection.") : t("Hands on the timer when you're ready.");
   }
-  if (inspection) return t("Press space or tap to start inspection.");
-  return t("Hold space or the screen, release to start.");
+  if (inspection) return touch ? t("Tap to start inspection.") : t("Press space or tap to start inspection.");
+  return touch ? t("Touch and hold, let go to start.") : t("Hold space or the screen, release to start.");
 }
 
 function hardwareHelp(t: (k: string) => string, input: string, s: HardwareStatus | "off"): string {

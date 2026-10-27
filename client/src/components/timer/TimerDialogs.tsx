@@ -31,7 +31,7 @@ function Seg<T extends string | number>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="tset__row">
+    <div className="group-row tset__row">
       <span className="tset__label">{label}</span>
       <div className="tseg" role="radiogroup" aria-label={label}>
         {options.map((o) => (
@@ -53,9 +53,9 @@ function Seg<T extends string | number>({
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="tset__row tset__toggle">
+    <label className="group-row tset__row">
       <span className="tset__label">{label}</span>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <input type="checkbox" role="switch" className="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} />
     </label>
   );
 }
@@ -69,7 +69,8 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   return (
     <Modal title={t("Timer settings")} onClose={onClose} wide>
       <div className="tset">
-        <h3 className="tset__group">{t("Input")}</h3>
+        <h3 className="group-title">{t("Input")}</h3>
+        <div className="group">
         <Seg<InputMethod>
           label={t("Add solves with")}
           value={s.input}
@@ -82,7 +83,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           ]}
         />
         {!bt && (
-          <p className="tertiary tset__note">
+          <p className="group-row tertiary tset__note">
             {t("Bluetooth timers need Chrome or Edge on a computer or Android.")}
           </p>
         )}
@@ -108,7 +109,9 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           options={PHASE_OPTIONS.map((p) => ({ value: p, label: String(p) }))}
         />
 
-        <h3 className="tset__group">{t("Inspection")}</h3>
+        </div>
+        <h3 className="group-title">{t("Inspection")}</h3>
+        <div className="group">
         <Toggle label={t("WCA inspection (15 seconds)")} checked={s.inspection} onChange={(inspection) => set({ inspection })} />
         <Seg<AlertMode>
           label={t("8 and 12 second calls")}
@@ -122,10 +125,10 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           ]}
         />
         {(s.alerts === "male" || s.alerts === "female") && (
-          <div className="tset__row">
+          <div className="group-row tset__row">
             <span className="tset__label">{t("Voice")}</span>
             <select
-              className="input tset__select"
+              className="pill-select tset__select"
               value={s.voiceName}
               onChange={(e) => set({ voiceName: e.target.value })}
             >
@@ -139,7 +142,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           </div>
         )}
         {s.alerts !== "off" && (
-          <div className="tset__row">
+          <div className="group-row tset__row">
             <span className="tset__label">{t("Volume")}</span>
             <input
               type="range"
@@ -150,7 +153,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
               aria-label={t("Volume")}
             />
             <button
-              className="btn btn--secondary tset__test"
+              className="pill pill--sm tset__test"
               onClick={() =>
                 announce(t("Eight seconds"), {
                   mode: s.alerts,
@@ -165,7 +168,9 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        <h3 className="tset__group">{t("Display")}</h3>
+        </div>
+        <h3 className="group-title">{t("Display")}</h3>
+        <div className="group">
         <Seg<UpdateMode>
           label={t("While timing, show")}
           value={s.update}
@@ -189,8 +194,10 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
         <Toggle label={t("Focus mode: hide everything while timing")} checked={s.zen} onChange={(zen) => set({ zen })} />
         <Toggle label={t("Show the difference from your last solve")} checked={s.diffLabel} onChange={(diffLabel) => set({ diffLabel })} />
 
-        <h3 className="tset__group">{t("Statistics")}</h3>
-        <div className="tset__row">
+        </div>
+        <h3 className="group-title">{t("Statistics")}</h3>
+        <div className="group">
+        <div className="group-row tset__row">
           <span className="tset__label">{t("Averages shown")}</span>
           <div className="tset__checks">
             {INDICATOR_OPTIONS.map((k) => (
@@ -217,6 +224,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           onChange={(trimPct) => set({ trimPct })}
           options={TRIM_OPTIONS.map((p) => ({ value: p, label: `${p}%` }))}
         />
+        </div>
       </div>
     </Modal>
   );
@@ -240,7 +248,7 @@ export function SessionsDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal title={t("Sessions")} onClose={onClose} wide>
-      <ul className="tsess">
+      <ul className="group tsess">
         {sessions.map((s, i) => {
           const st = sessionStats(s.solves, { indicators: [] });
           return (
@@ -256,7 +264,7 @@ export function SessionsDialog({ onClose }: { onClose: () => void }) {
                 }}
               />
               <select
-                className="input tsess__event"
+                className="pill-select tsess__event"
                 value={s.event}
                 aria-label={t("Puzzle")}
                 onChange={(e) => {
@@ -271,18 +279,18 @@ export function SessionsDialog({ onClose }: { onClose: () => void }) {
                 ))}
               </select>
               <span className="tertiary mono tsess__meta">
-                {st.count} · {formatStat(st.mean)}
+                {st.count} {t("solves")} · {t("mean")} {formatStat(st.mean)}
               </span>
               <div className="tsess__actions">
-                <button className="btn btn--ghost" disabled={i === 0} onClick={() => move(i, -1)} aria-label={t("Move up")}>
+                <button className="pill pill--plain pill--sm" disabled={i === 0} onClick={() => move(i, -1)} aria-label={t("Move up")}>
                   ↑
                 </button>
-                <button className="btn btn--ghost" disabled={i === sessions.length - 1} onClick={() => move(i, 1)} aria-label={t("Move down")}>
+                <button className="pill pill--plain pill--sm" disabled={i === sessions.length - 1} onClick={() => move(i, 1)} aria-label={t("Move down")}>
                   ↓
                 </button>
                 {sessions.length > 1 && (
                   <select
-                    className="input tsess__merge"
+                    className="pill-select pill--sm tsess__merge"
                     value=""
                     aria-label={t("Merge into")}
                     onChange={(e) => {
@@ -306,7 +314,7 @@ export function SessionsDialog({ onClose }: { onClose: () => void }) {
                   </select>
                 )}
                 <button
-                  className="btn btn--ghost tsess__delete"
+                  className="pill pill--plain pill--sm pill--danger tsess__delete"
                   onClick={() => {
                     if (window.confirm(t("Delete this session and its solves?"))) {
                       timerStore.remove(s.id);
@@ -322,7 +330,7 @@ export function SessionsDialog({ onClose }: { onClose: () => void }) {
         })}
       </ul>
       <button
-        className="btn btn--secondary"
+        className="pill tsess__new"
         onClick={() => {
           const ev = timerStore.active()?.event ?? "333";
           timerStore.create(t(eventName(ev)), ev);
@@ -331,6 +339,82 @@ export function SessionsDialog({ onClose }: { onClose: () => void }) {
       >
         {t("New session")}
       </button>
+    </Modal>
+  );
+}
+
+/**
+ * Start a new session: pick the puzzle (big, tappable), optionally name it,
+ * done. The name defaults to the puzzle's, so one tap is enough.
+ */
+export function NewSessionDialog({ onClose, defaultEvent }: { onClose: () => void; defaultEvent: string }) {
+  const { t } = useT();
+  const [event, setEvent] = useState(defaultEvent === "none" ? "333" : defaultEvent);
+  const [name, setName] = useState("");
+  const create = () => {
+    timerStore.create(name.trim() || t(eventName(event)), event);
+    onClose();
+  };
+  return (
+    <Modal title={t("New session")} onClose={onClose}>
+      <p className="group-note tnew__lead">
+        {t("A session keeps one set of solves and stats, like a notebook per puzzle or goal.")}
+      </p>
+      <h3 className="group-title">{t("Puzzle")}</h3>
+      <div className="tnew__grid" role="radiogroup" aria-label={t("Puzzle")}>
+        {TIMER_EVENTS.map((ev) => (
+          <button
+            key={ev.id}
+            role="radio"
+            aria-checked={event === ev.id}
+            className={`tnew__puzzle${event === ev.id ? " is-on" : ""}`}
+            onClick={() => setEvent(ev.id)}
+          >
+            {t(ev.name)}
+          </button>
+        ))}
+      </div>
+      <h3 className="group-title">{t("Name (optional)")}</h3>
+      <input
+        className="input tnew__name"
+        value={name}
+        maxLength={40}
+        placeholder={t(eventName(event))}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") create();
+        }}
+      />
+      <button className="btn tnew__create" onClick={create}>
+        {t("Create session")}
+      </button>
+    </Modal>
+  );
+}
+
+/** How the timer works, in a few plain sentences. */
+export function HelpDialog({ onClose }: { onClose: () => void }) {
+  const { t } = useT();
+  const rows: [string, string][] = [
+    [t("Start and stop"), t("Hold the spacebar (or touch and hold the timer) until the time turns green, then let go to start. Press any key or tap anywhere to stop.")],
+    [t("Scrambles"), t("Each solve gets a fresh official WCA scramble. Tap the scramble to copy it, or use Previous / Next.")],
+    [t("After a solve"), t("Mark it OK, +2 or DNF, add a comment, or delete it. Tap any time in the list to edit it later.")],
+    [t("Sessions"), t("A session is a separate list of solves with its own stats, for example one per puzzle. Use + to start one, and Sessions to rename, merge or delete.")],
+    [t("Averages"), t("mo3 is the mean of your last 3 solves. ao5 and ao12 average your last 5 or 12 after dropping the best and worst, like official WCA averages. σ shows how consistent you are (lower is steadier).")],
+    [t("Inspection"), t("Turn on WCA inspection in Settings to get 15 seconds to look at the cube, with spoken 8 and 12 second calls. Starting late adds +2, very late is a DNF.")],
+    [t("Other timers"), t("In Settings, switch input to type times in, or connect a Stackmat or a GAN Bluetooth timer.")],
+    [t("Keyboard shortcuts"), t("Esc cancels. Ctrl+1/2/3 set the last solve to OK/+2/DNF. Ctrl+Z deletes it. Alt+arrows change scramble or session.")],
+  ];
+  return (
+    <Modal title={t("How the timer works")} onClose={onClose} wide>
+      <div className="group">
+        {rows.map(([title, body]) => (
+          <div key={title} className="group-row group-row--stack thelp__row">
+            <strong className="thelp__title">{title}</strong>
+            <span className="muted thelp__body">{body}</span>
+          </div>
+        ))}
+      </div>
     </Modal>
   );
 }

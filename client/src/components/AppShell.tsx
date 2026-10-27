@@ -85,6 +85,21 @@ export function AppShell() {
           <Outlet />
         </Suspense>
       </main>
+      {/* Phones: an iOS-style tab bar replaces the nav links. */}
+      <nav className="tabbar" aria-label={t("Sections")}>
+        <NavLink to="/app" end className={({ isActive }) => `tabbar__item${isActive ? " is-active" : ""}`}>
+          {t("Timer")}
+        </NavLink>
+        <NavLink to="/app/competitions" className={({ isActive }) => `tabbar__item${isActive ? " is-active" : ""}`}>
+          {t("Competitions")}
+        </NavLink>
+        <NavLink to="/app/friends" className={({ isActive }) => `tabbar__item${isActive ? " is-active" : ""}`}>
+          {t("Friends")}
+        </NavLink>
+        <NavLink to="/app/settings" className={({ isActive }) => `tabbar__item${isActive ? " is-active" : ""}`}>
+          {t("Settings")}
+        </NavLink>
+      </nav>
       <footer className="app-foot">
         <NavLink to="/app/feedback" className="app-foot__link">
           {t("Report a bug or suggest something")}

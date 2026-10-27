@@ -30,14 +30,16 @@
   --paper-on-ink: #f5f4f1;
   --accent-on-ink: #a8b8ff;
 
-  /* General Sans carries UI and body; Space Grotesk carries every number in
-     the product (timers, averages, scrambles) with tabular figures so
-     running times never jitter; Instrument Serif is the display voice for
-     the big editorial headlines only. */
-  --font: "General Sans", -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --mono: "Space Grotesk", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
-  --font-display: "Instrument Serif", "Times New Roman", Georgia, serif;
+  /* Apple's system typeface everywhere: SF Pro on Apple devices (the
+     browser picks Text or Display by size), Segoe UI / Roboto elsewhere.
+     Numbers use the same face with tabular figures (.mono), like the Clock
+     app's stopwatch, so running times never jitter. Nothing to download. */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue",
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 * {
@@ -206,9 +208,9 @@ h3 {
 .display {
   font-family: var(--font-display);
   font-size: 56px;
-  line-height: 1.04;
-  letter-spacing: -0.01em;
-  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  font-weight: 700;
 }
 
 .title {
